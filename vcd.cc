@@ -22,7 +22,6 @@
 #include <time.h>
 #include <math.h>
 #include <ctype.h>
-#include <common/hash.h>
 #include <common/misc.h>
 #include <common/int.h>
 #include "trace.h"

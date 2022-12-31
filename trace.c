@@ -22,8 +22,17 @@
 #include <stdio.h>
 #include <dlfcn.h>
 #include <string.h>
-#include <common/misc.h>
+#include <stdlib.h>
 #include "trace.h"
+
+#define NEW(a,b)							\
+  do {									\
+    (a) = (b *) malloc (sizeof (b));					\
+    if (!(a)) {								\
+      fprintf (stderr, "FATAL: could not allocate %lu bytes\n", sizeof (b)); \
+      exit (1);								\
+    }									\
+  } while (0)
 
 act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)
 {
@@ -79,7 +88,11 @@ act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)
   }
 
   l = strlen (prefix) + 32;
-  MALLOC (buf, char, l);
+  buf = (char *) malloc (sizeof (char)*l);
+  if (!buf) {
+     fprintf (stderr, "FATAL: could not allocate %d bytes\n", l);
+     exit (1);
+  }
 
   err = 0;
   for (i=0; fns[i].name; i++) {
@@ -99,7 +112,7 @@ act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)
       *(fns[i].offset) = NULL;
     }
   }
-  FREE (buf);
+  free (buf);
   if (err) {
     return NULL;
   }
@@ -145,7 +158,7 @@ act_trace_t *act_trace_create (act_extern_trace_func_t *tlib,
   }
   
   if (!t->handle) {
-    FREE (t);
+    free (t);
     return NULL;
   }
   t->mode = mode;
@@ -258,7 +271,7 @@ int act_trace_close (act_trace_t *t)
     return 0;
   }
   ret = (*t->t->close_tracefile) (t->handle);
-  FREE (t);
+  free (t);
   return ret;
 }
 

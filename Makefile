@@ -29,14 +29,14 @@ SHOBJS1=vcd.os
 
 SRCS=$(SHOBJS1:.os=.cc) $(OBJS:.o=.c)
 
-include $(VLSI_TOOLS_SRC)/scripts/Makefile.std
+include $(ACT_HOME)/scripts/Makefile.std
 
 $(LIB): $(OBJS)
 	ar ruv $(LIB) $(OBJS)
 	$(RANLIB) $(LIB)
 
 $(SHLIB1): $(SHOBJS1)
-	$(VLSI_TOOLS_SRC)/scripts/linkso $(SHLIB1) $(SHOBJS1) $(SHLIBCOMMON)
+	$(ACT_HOME)/scripts/linkso $(SHLIB1) $(SHOBJS1) $(SHLIBCOMMON)
 
 -include Makefile.deps
 
