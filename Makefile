@@ -20,14 +20,20 @@
 #-------------------------------------------------------------------------
 
 LIB=libtracelib_$(EXT).a
-SHLIB1=libtracevcd_$(EXT).so
+SHLIB1=libtrace_vcd_$(EXT).so
+SHLIB2=libtrace_lxt2_$(EXT).so
+SHLIB3=libtrace_atr_$(EXT).so
 
-TARGETLIBS=$(LIB) $(SHLIB1)
+TARGETLIBS=$(LIB) $(SHLIB1) $(SHLIB2) $(SHLIB3)
 
 OBJS=trace.o
 SHOBJS1=vcd.os
+SHOBJS2=lxt2.os ext/lxt2_write.os
+SHOBJS3=atr.os
 
-SRCS=$(SHOBJS1:.os=.cc) $(OBJS:.o=.c)
+SRCS=$(SHOBJS1:.os=.cc) $(OBJS:.o=.c) lxt2.c atr.c
+
+SUBDIRS=ext
 
 include $(ACT_HOME)/scripts/Makefile.std
 
@@ -37,6 +43,12 @@ $(LIB): $(OBJS)
 
 $(SHLIB1): $(SHOBJS1)
 	$(ACT_HOME)/scripts/linkso $(SHLIB1) $(SHOBJS1) $(SHLIBCOMMON)
+
+$(SHLIB2): $(SHOBJS2)
+	$(ACT_HOME)/scripts/linkso $(SHLIB2) $(SHOBJS2) -lz
+
+$(SHLIB3): $(SHOBJS3)
+	$(ACT_HOME)/scripts/linkso $(SHLIB3) $(SHOBJS3) $(SHLIBCOMMON)
 
 -include Makefile.deps
 
