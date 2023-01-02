@@ -35,7 +35,7 @@ To begin using the interface, a shared object library must be loaded.
   * This returns a signal handle that to be used when recording signal changes. It returns `NULL` on failure.
   * `nm` is the name of the signal, `type` (one of `ACT_SIG_BOOL`, `ACT_SIG_INT`, `ACT_SIG_CHAN`, `ACT_SIG_ANALOG`) specifies the signal type, and for channel and integer arguments the `width` is the bit-width of the data.
 
-* `int act_trace_init_block (act_trace_t *)` and `int act_trace_init_end (act_trace_t *)`
+* `int act_trace_init_start (act_trace_t *)` and `int act_trace_init_end (act_trace_t *)`
   * This indicates the start of the block of initial values for signals. Signal initial values are recorded with time set to zero and the signal change API (below). 
   * The functions return 1 on success, 0 on failure.
 

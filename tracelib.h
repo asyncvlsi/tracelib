@@ -173,7 +173,7 @@ extern "C" {
   void *act_trace_add_signal (act_trace_t *,  act_signal_type_t type,
 			      const char *s, int width);
 
-  int act_trace_init_block (act_trace_t *);
+  int act_trace_init_start (act_trace_t *);
   int act_trace_init_end (act_trace_t *);
 
   int act_trace_analog_change (act_trace_t *, void *node, float t, float v);

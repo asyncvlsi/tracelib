@@ -342,7 +342,7 @@ void *act_trace_add_signal (act_trace_t *t, act_signal_type_t type,
 }
 
 
-int act_trace_init_block (act_trace_t *t)
+int act_trace_init_start (act_trace_t *t)
 {
   if (!t) return 0;
   
