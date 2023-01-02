@@ -87,32 +87,43 @@ act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)
 
   tmpdl = NULL;
   buf = NULL;
+
+  /* if library name not specified, use the default name */
   if (!dl) {
     l = strlen (prefix) + 14;
     tmpdl = (char *) malloc (l);
     if (!tmpdl) return NULL;
     snprintf (tmpdl, l, "libtrace_%s.so", prefix);
   }
-  /* default location: TRACELIB_ENV/lib/name */
+
+#if defined(TRACELIB_ENV)
+  /* check default location: TRACELIB_ENV/lib/name */
   if (getenv (TRACELIB_ENV)) {
-     FILE *fp;
-     l = strlen (getenv (TRACELIB_ENV)) + strlen(dl ? dl : tmpdl) + 6;
-     buf = (char *) malloc (l);
-     if (!buf) {
-        return NULL;
-     }
-     snprintf (buf, l, "%s/lib/%s", getenv (TRACELIB_ENV), dl ? dl : tmpdl);
-     fp = fopen (buf, "r");
-     if (!fp) {
-        free (buf);
-        buf = NULL;
-     }
+    FILE *fp;
+    l = strlen (getenv (TRACELIB_ENV)) + strlen(dl ? dl : tmpdl) + 6;
+    buf = (char *) malloc (l);
+    if (!buf) {
+      return NULL;
+    }
+    snprintf (buf, l, "%s/lib/%s", getenv (TRACELIB_ENV), dl ? dl : tmpdl);
+    fp = fopen (buf, "r");
+    if (!fp) {
+      free (buf);
+      buf = NULL;
+    }
   }
+#endif
+  
   if (!buf) {
-     l = strlen (dl ? dl : tmpdl) + 1;
-     buf = (char *) malloc (l);
-     if (!buf) { return NULL; }
-     snprintf (buf, l, "%s", dl ? dl : tmpdl);
+    l = strlen (dl ? dl : tmpdl) + 1;
+    buf = (char *) malloc (l);
+    if (!buf) {
+      if (tmpdl) {
+	free (tmpdl);
+      }
+      return NULL;
+    }
+    snprintf (buf, l, "%s", dl ? dl : tmpdl);
   }
 
   dlib = dlopen (buf, RTLD_LAZY);
@@ -120,17 +131,18 @@ act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)
     fprintf (stderr, "ERROR: failed to open `%s' as a trace library (prefix=%s)\n",
 	     buf, prefix);
     free (buf);
-    if (tmpdl) { free (tmpdl); }
+    if (tmpdl) {
+      free (tmpdl);
+    }
     return NULL;
   }
   free (buf);
-  if (tmpdl) { free (tmpdl); }
 
   l = strlen (prefix) + 32;
   buf = (char *) malloc (sizeof (char)*l);
   if (!buf) {
-     fprintf (stderr, "FATAL: could not allocate %d bytes\n", l);
-     exit (1);
+    fprintf (stderr, "FATAL: could not allocate %d bytes\n", l);
+    exit (1);
   }
 
   err = 0;
@@ -144,7 +156,7 @@ act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)
     }
     else if (fns[i].mustbe) {
       fprintf (stderr, "ERROR: missing required symbol %s from library %s\n",
-	       buf, dl);
+	       buf, dl ? dl : tmpdl);
       err++;
     }
     else {
@@ -153,16 +165,91 @@ act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)
   }
   free (buf);
   if (err) {
+    if (tmpdl) {
+      free (tmpdl);
+    }
     return NULL;
   }
   if (!t.create_tracefile && !t.create_tracefile_alt) {
-    fprintf (stderr, "ERROR: missing create function in library %s\n", dl);
+    fprintf (stderr, "ERROR: missing create function in library %s\n",
+	     dl ? dl : tmpdl);
+    if (tmpdl) {
+      free (tmpdl);
+    }
     return NULL;
+  }
+  if (!t.add_analog_signal && !t.add_digital_signal && !t.add_int_signal &&
+      !t.add_chan_signal) {
+    fprintf (stderr, "ERROR: missing all add_signal functions in library %s\n",
+	     dl ? dl : tmpdl);
+    if (tmpdl) {
+      free (tmpdl);
+    }
+    return NULL;
+  }
+  if (t.create_tracefile) {
+    if (t.add_analog_signal && !t.std.signal_change_analog) {
+      fprintf (stderr, "ERROR: missing analog signal change in library %s\n",
+	       dl ? dl : tmpdl);
+      if (tmpdl) {
+	free (tmpdl);
+      }
+      return NULL;
+    }
+    if (t.add_digital_signal || t.add_int_signal || t.add_chan_signal) {
+      if (!t.std.signal_change_digital) {
+	fprintf (stderr, "ERROR: missing digital signal change in library %s\n",
+		 dl ? dl : tmpdl);
+	if (tmpdl) {
+	  free (tmpdl);
+	}
+	return NULL;
+      }
+      if (!t.std.signal_change_wide_digital) {
+	fprintf (stderr, "ERROR: missing wide digital signal change in library %s\n",
+	       dl ? dl : tmpdl);
+	if (tmpdl) {
+	  free (tmpdl);
+	}
+	return NULL;
+      }
+    }
+  }
+  if (t.create_tracefile_alt) {
+    if (t.add_analog_signal && !t.alt.signal_change_analog) {
+      fprintf (stderr, "ERROR: missing alt analog signal change in library %s\n",
+	       dl ? dl : tmpdl);
+      if (tmpdl) {
+	free (tmpdl);
+      }
+      return NULL;
+    }
+    if (t.add_digital_signal || t.add_int_signal || t.add_chan_signal) {
+      if (!t.alt.signal_change_digital) {
+	fprintf (stderr, "ERROR: missing alt digital signal change in library %s\n",
+		 dl ? dl : tmpdl);
+	if (tmpdl) {
+	  free (tmpdl);
+	}
+	return NULL;
+      }
+      if (!t.alt.signal_change_wide_digital) {
+	fprintf (stderr, "ERROR: missing alt wide digital signal change in library %s\n",
+	       dl ? dl : tmpdl);
+	if (tmpdl) {
+	  free (tmpdl);
+	}
+	return NULL;
+      }
+    }
   }
   
   NEW (fn, act_extern_trace_func_t);
   *fn = t;
 
+  if (tmpdl) {
+    free (tmpdl);
+  }
   return fn;
 }
 
