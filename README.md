@@ -23,12 +23,13 @@ There are two ways to build the library.
 To begin using the interface, a shared object library must be loaded.
 
 * `act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)`
-** The `prefix` string is normally the name of the format. Functions in the shared object library that implement the necessary API start with `<prefix>_`.
-** `dl` is the path to the shared object library. If omitted, the default name is used, which is `libtrace_<prefix>.so`. If the library was built as an ACT support library, the `$ACT_HOME/lib/` directory is checked for the library as well.
-** If successful, a pointer to the trace file API is returned that is used to create a trace file.
+  * The `prefix` string is normally the name of the format. Functions in the shared object library that implement the necessary API start with `<prefix>_`.
+  * `dl` is the path to the shared object library. If omitted, the default name is used, which is `libtrace_<prefix>.so`. If the library was built as an ACT support library, the `$ACT_HOME/lib/` directory is checked for the library as well.
+  * If successful, a pointer to the trace file API is returned that is used to create a trace file.
 
 * `act_trace_t *act_trace_create (act_extern_trace_func_t *, const char *name, float stop_time, float ts, int mode)`
-** This creates the trace file with the specified name. It takes the trace file API as an argument, as well as the end time for the simulation trace and the time resolution. The mode argument can be zero or one; zero means that the trace file created uses the API where the time is specified as a floating-point number. If mode is one, the time is specified as an unsigned integer, where the time in SI units is obtained by multiplying the integer by `ts`. Note that a trace file API can support both interfaces, but a specific trace file can only use one of the two options.
+  * This creates the trace file with the specified name. It takes the trace file API as an argument, as well as the end time for the simulation trace and the time resolution.
+  * The mode argument can be zero or one; zero means that the trace file created uses the API where the time is specified as a floating-point number. If mode is one, the time is specified as an unsigned integer, where the time in SI units is obtained by multiplying the integer by `ts`. Note that a trace file API can support both interfaces, but a specific trace file can only use one of the two options.
 
 
 
