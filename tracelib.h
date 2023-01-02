@@ -48,8 +48,8 @@ extern "C" {
   } act_signal_type_t;
 
 #define ACT_TRACE_CHAN_WIDTH(w) ((w) < 2 ? ((w)+2) : ((w)+1))
-#define ACT_TRACE_WIDE_NUM(w) (((w)+8*sizeof (unsigned long)-1)/(8*sizeof(unsigned long))))
-#define ACT_TRACE_CHAN_NUM(w) ACT_TRACE_WIDE_NUM(ACT_TRACE_CHAN_WIDTH(w))
+#define ACT_TRACE_WIDE_NUM(w) (((w)+8*sizeof (unsigned long)-1)/(8*sizeof(unsigned long)))
+#define ACT_TRACE_CHAN_NUM(w) ACT_TRACE_WIDE_NUM(ACT_TRACE_CHAN_WIDTH (w))
 
   typedef struct {
     /* return a handle to the trace file for subsequent calls */
