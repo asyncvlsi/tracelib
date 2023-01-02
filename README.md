@@ -31,5 +31,35 @@ To begin using the interface, a shared object library must be loaded.
   * This creates the trace file with the specified name. It takes the trace file API as an argument, as well as the end time for the simulation trace and the time resolution.
   * The mode argument can be zero or one; zero means that the trace file created uses the API where the time is specified as a floating-point number. If mode is one, the time is specified as an unsigned integer, where the time in SI units is obtained by multiplying the integer by `ts`. Note that a trace file API can support both interfaces, but a specific trace file can only use one of the two options.
 
+* `void *act_trace_add_signal (act_trace_t *,  act_signal_type_t type, const char *s, int width)`
+  * This returns a signal handle that to be used when recording signal changes. It returns `NULL` on failure.
+  * `nm` is the name of the signal, `type` (one of `ACT_SIG_BOOL`, `ACT_SIG_INT`, `ACT_SIG_CHAN`, `ACT_SIG_ANALOG`) specifies the signal type, and for channel and integer arguments the `width` is the bit-width of the data.
 
+* `int act_trace_init_block (act_trace_t *)` and `int act_trace_init_end (act_trace_t *)`
+  * This indicates the start of the block of initial values for signals. Signal initial values are recorded with time set to zero and the signal change API (below). 
+  * The functions return 1 on success, 0 on failure.
 
+* Signal changes for mode zero are recorded with the following API calls
+  * `int act_trace_analog_change (act_trace_t *, void *node, float t, float v)`
+  * `int act_trace_digital_change (act_trace_t *, void *node, float t, unsigned long v)`
+  * `int act_trace_wide_digital_change (act_trace_t *, void *node, float t, int len, unsigned long *v)`
+    * This call is used to support wider than 64-bit values recorded in the trace. `len` (more than one) is the size of the `v` array, where the least significant 64-bit chunk is in `v[0]`.
+  * All functions return 1 on success, 0 on failure. The `node` pointer is the handle returned when the signal was added.
+
+* Signal changes for mode one are recoded with a similar API, except that the time is specified as an array of unsigned long values (similar to the wide integer/channel).
+  * `int act_trace_analog_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, float v)`
+  * `int act_trace_digital_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, unsigned long v)`
+  * `int act_trace_wide_digital_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, int lenv, unsigned long *v)`
+  * All functions return 1 on success, 0 on failure.
+
+* `int act_trace_close (act_trace_t *)`
+  * Closes the trace file and releases storage.
+
+Finally, the API enforces a simple state machine in terms of the order in which these functions are to be called. The order must be:
+1. Create trace file
+2. Add signals
+3. Start initial block
+4. Add initial values
+5. End initial block
+6. Any signal changes for the rest of the simulation
+7. Close trace file
