@@ -34,7 +34,7 @@
     }									\
   } while (0)
 
-act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)
+act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *dl)
 {
   void *dlib;
   char *buf;

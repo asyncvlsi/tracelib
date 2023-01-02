@@ -158,7 +158,7 @@ extern "C" {
      If your file format ooes not support a signal type, you can omit
      the funcftions from the library. Those signals will be skipped.
   */
-  act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl);
+  act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *dl);
 
   /* return a handle to the trace file for subsequent calls 
      
