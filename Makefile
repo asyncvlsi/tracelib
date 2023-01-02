@@ -37,6 +37,8 @@ SUBDIRS=ext
 
 include $(ACT_HOME)/scripts/Makefile.std
 
+CFLAGS+=-DACT_MODE -DTRACELIB_ENV=\"ACT_HOME\"
+
 $(LIB): $(OBJS)
 	ar ruv $(LIB) $(OBJS)
 	$(RANLIB) $(LIB)

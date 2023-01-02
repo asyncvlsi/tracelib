@@ -19,17 +19,122 @@
  *
  **************************************************************************
  */
+#include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <math.h>
 #include <ctype.h>
-#include <common/misc.h>
-#include <common/int.h>
 #include "trace.h"
 
+#ifdef ACT_MODE
+#include <common/int.h>
+#endif
 
 namespace {
 // hide this part
 
+int  _mygensort (char *a, char *b, int elem_sz,
+		 int sz, int (*cmpfn)(char *, char *))
+{
+  char *x, *y, *z;
+  int i, j;
+  int p;
+  
+  if (sz == 1) {
+    return 0;
+  }
+  if ((p = _mygensort (a, b, elem_sz, sz/2, cmpfn))) {
+    x = b;
+    z = a;
+  }
+  else {
+    x = a;
+    z = b;
+  }
+  if (_mygensort (a+(sz/2)*elem_sz, b+(sz/2)*elem_sz, elem_sz, sz-sz/2, cmpfn)) {
+    if (p == 0) {
+      /* copy */
+      y = a+(sz/2)*elem_sz;
+      for (i=0; i < (sz-sz/2)*elem_sz; i++) {
+	y[i] = (b+(sz/2)*elem_sz)[i];
+      }
+    }
+    else {
+      y = b+(sz/2)*elem_sz;
+    }
+  }
+  else {
+    if (p == 1) {
+      /* copy */
+      y = b+(sz/2)*elem_sz;
+      for (i=0; i < (sz-sz/2)*elem_sz; i++) {
+	y[i] = (a+(sz/2)*elem_sz)[i];
+      }
+    }
+    else {
+      y = a+(sz/2)*elem_sz;
+    }
+  }
+
+  /* -- merge -- */
+  i = 0;
+  j = 0;
+  while (i < sz/2 || j < (sz-sz/2)) {
+    int k;
+    if (i < sz/2) {
+      if (j < (sz-sz/2)) {
+	if ((*cmpfn) (x+ i*elem_sz, y + j*elem_sz) <= 0) {
+	  for (k=0; k < elem_sz; k++) {
+	    z[(i+j)*elem_sz + k] = x[i*elem_sz + k];
+	  }
+	  i++;
+	}
+	else {
+	  for (k=0; k < elem_sz; k++) {
+	    z[(i+j)*elem_sz + k] = y[j*elem_sz + k];
+	  }
+	  j++;
+	}
+      }
+      else {
+	for (k=0; k < elem_sz; k++) {
+	  z[(i+j)*elem_sz + k] = x[i*elem_sz + k];
+	}
+	i++;
+      }
+    }
+    else {
+      for (k=0; k < elem_sz; k++) {
+	z[(i+j)*elem_sz + k] = y[j*elem_sz + k];
+      }
+      j++;
+    }
+  }
+  return (1-p);
+}
+		     
+void mygenmergesort (char *a, int elem_sz, int sz,
+		     int (*cmpfn)(char *, char *))
+{
+  char *b;
+  int i;
+
+  if (sz <= 1) return;
+
+  b = (char *) malloc (sz * elem_sz);
+  if (!b) {
+    fprintf (stderr, "Failed to allocate %d bytes\n", sz * elem_sz);
+    exit (1);
+  }
+
+  if (_mygensort (a, b, elem_sz, sz, cmpfn)) {
+    for (i=0; i < sz*elem_sz; i++) {
+      a[i] = b[i];
+    }
+  }
+  free (b);
+}
+ 
 static const char **_strings;
 
 static int _vcd_group_signals (char *a, char *b)
@@ -96,21 +201,23 @@ class VCDInfo {
     _idxmap = 0;
     _type = NULL;
     _mode = mode;
+#ifdef ACT_MODE    
     _last_itime = 0;
+#endif    
   }
   
   ~VCDInfo () {
     fclose (_fp);
     _fp = NULL;
     if (_idxmap) {
-      FREE (_idxmap);
+      free (_idxmap);
     }
     if (_nm_max > 0) {
-      FREE (_nm)
+      free (_nm)
 ;
     }
     if (_type) {
-      FREE (_type);
+      free (_type);
     }
   }
 
@@ -202,7 +309,11 @@ class VCDInfo {
     // now sort and emit the variable names and short cuts
     if (_nm_len > 0) {
       _strings = _nm;
-      MALLOC (_idxmap, int, _nm_len);
+      _idxmap = (int *) malloc (sizeof (int) * _nm_len);
+      if (!_idxmap) {
+	fprintf (stderr, "Failed to allocate %d ints\n", _nm_len);
+	exit (1);
+      }
       for (int i=0; i < _nm_len; i++) {
 	_idxmap[i] = i;
       }
@@ -224,7 +335,8 @@ class VCDInfo {
     fprintf (_fp, "$dumpvars\n");
     _in_dump = 1;
     _nm_max = 0;
-    FREE (_nm);
+    free (_nm);
+    _nm = NULL;
   }
 
   void dumpEnd() {
@@ -260,6 +372,7 @@ class VCDInfo {
     }
   }
 
+#ifdef ACT_MODE  
   void emitTime (BigInt t) {
     if (_mode != 0) {
       if (t == _last_itime) {
@@ -271,32 +384,39 @@ class VCDInfo {
       _last_itime = t;
     }
   }
+#endif  
 
   void emitDigital (int idx, unsigned long v) {
-    BigInt tmp;
-    tmp = v;
+    int width = 32;
     if (_type[idx] > 0) {
-      tmp.setWidth (_type[idx]);
+      width = _type[idx];
     }
     fprintf (_fp, "b");
-    tmp.bitPrint (_fp);
+    for (int i=0; i < width; i++) {
+      fprintf (_fp, "%c", ((v >> (width-1-i)) & 1) ? '1' : '0');
+    }
     fprintf (_fp, " %s\n", _idx_to_char (idx));
   }
 
   void emitDigital (int idx, int len, unsigned long *v) {
-    BigInt tmp;
+    int width = 32;
+    int off = 0;
     if (_type[idx] > 0) {
-      tmp.setWidth (_type[idx]);
-    }
-    for (int i=0; i < len; i++) {
-      if (i < tmp.getLen()) {
-	tmp.setVal (i, v[i]);
-      }
+      width = _type[idx];
     }
     fprintf (_fp, "b");
-    tmp.bitPrint (_fp);
+    len--;
+    off = (width-1) % 64;
+    for (int i=0; i < width; i++) {
+      fprintf (_fp, "%c", ((v[len] >> off) & 1) ? '1' : '0');
+      off--;
+      if (off < 0) {
+	off = 63;
+	len--;
+      }
+    }
     fprintf (_fp, " %s\n", _idx_to_char (idx));
-  }    
+  }
 
   void emitAnalog (int idx, float v) {
     fprintf (_fp, "r%.16g %s\n", v, _idx_to_char (idx));
@@ -315,19 +435,37 @@ class VCDInfo {
   int _in_dump;
   int _mode;
   float _last_time;
+#ifdef ACT_MODE  
   BigInt _last_itime;
+#endif  
 
   void _appendName (const char *nm, int t) {
     if (_nm_len == _nm_max) {
       if (_nm_max == 0) {
 	_nm_max = 8;
-	MALLOC (_nm, const char *, _nm_max);
-	MALLOC (_type, int, _nm_max);
+	_nm = (const char **) malloc (sizeof (const char *) * _nm_max);
+	if (!_nm) {
+	  fprintf (stderr, "Failed to allocate %d pointers\n", _nm_max);
+	  exit (1);
+	}
+	_type = (int *) malloc (sizeof (int) * _nm_max);
+	if (!_type) {
+	  fprintf (stderr, "Failed to allocate %d ints\n", _nm_max);
+	  exit (1);
+	}
       }
       else {
 	_nm_max = 2*_nm_max;
-	REALLOC (_nm, const char *, _nm_max);
-	REALLOC (_type, int, _nm_max);
+	_nm = (const char **) realloc (_nm, sizeof (const char *) * _nm_max);
+	if (!_nm) {
+	  fprintf (stderr, "Failed to allocate %d pointers\n", _nm_max);
+	  exit (1);
+	}
+	_type = (int *) realloc (_type, sizeof (int) * _nm_max);
+	if (!_type) {
+	  fprintf (stderr, "Failed to allocate %d ints\n", _nm_max);
+	  exit (1);
+	}
       }
     }
     _nm[_nm_len] = nm;
@@ -342,7 +480,10 @@ class VCDInfo {
     int pos = 0;
 
     do {
-      Assert (pos < 99, "Shortcut is too long; increase static buffer size!");
+      if (pos >= 99) {
+	fprintf (stderr, "Assertion failed: Shortcut is too long; increase static buffer size!\n");
+	exit (1);
+      }
       buf[pos] = (idx % (end_code - start_code + 1)) + start_code;
       idx = (idx - (idx % (end_code - start_code + 1)))/(end_code - start_code + 1);
       pos++;
@@ -373,6 +514,7 @@ void *vcd_create (const  char *nm, float stop_time, float ts)
   return vi;
 }
 
+#ifdef ACT_MODE
 void *vcd_create_alt (const  char *nm, float stop_time, float ts)
 {
   FILE *fp;
@@ -388,6 +530,7 @@ void *vcd_create_alt (const  char *nm, float stop_time, float ts)
 
   return vi;
 }
+#endif
 
 int vcd_signal_start (void *handle)
 {
@@ -483,6 +626,7 @@ int vcd_change_wide_digital (void *handle, void *node, float t,
 }
 
 
+#ifdef ACT_MODE
 int vcd_change_digital_alt (void *handle, void *node, int len,
 			    unsigned long *tm, unsigned long v)
 {
@@ -536,7 +680,7 @@ int vcd_change_wide_digital_alt (void *handle, void *node, int len,
   
   return 0;
 }
-
+#endif
 
 int vcd_close (void *handle)
 {

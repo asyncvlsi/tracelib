@@ -38,6 +38,7 @@ act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)
 {
   void *dlib;
   char *buf;
+  char *tmpdl;
   int l;
   int i;
   int err;
@@ -80,12 +81,50 @@ act_extern_trace_func_t *act_trace_load_format (char *prefix, const char *dl)
        { NULL, NULL, 0 }
       };
 
-  dlib = dlopen (dl, RTLD_LAZY);
-  if (!dlib) {
-    fprintf (stderr, "ERROR: failed to open `%s' as a trace library (prefix=%s)\n",
-	     dl, prefix);
+  if (!prefix) {
     return NULL;
   }
+
+  tmpdl = NULL;
+  buf = NULL;
+  if (!dl) {
+    l = strlen (prefix) + 14;
+    tmpdl = (char *) malloc (l);
+    if (!tmpdl) return NULL;
+    snprintf (tmpdl, l, "libtrace_%s.so", prefix);
+  }
+  /* default location: TRACELIB_ENV/lib/name */
+  if (getenv (TRACELIB_ENV)) {
+     FILE *fp;
+     l = strlen (getenv (TRACELIB_ENV)) + strlen(dl ? dl : tmpdl) + 6;
+     buf = (char *) malloc (l);
+     if (!buf) {
+        return NULL;
+     }
+     snprintf (buf, l, "%s/lib/%s", getenv (TRACELIB_ENV), dl ? dl : tmpdl);
+     fp = fopen (buf, "r");
+     if (!fp) {
+        free (buf);
+        buf = NULL;
+     }
+  }
+  if (!buf) {
+     l = strlen (dl ? dl : tmpdl) + 1;
+     buf = (char *) malloc (l);
+     if (!buf) { return NULL; }
+     snprintf (buf, l, "%s", dl ? dl : tmpdl);
+  }
+
+  dlib = dlopen (buf, RTLD_LAZY);
+  if (!dlib) {
+    fprintf (stderr, "ERROR: failed to open `%s' as a trace library (prefix=%s)\n",
+	     buf, prefix);
+    free (buf);
+    if (tmpdl) { free (tmpdl); }
+    return NULL;
+  }
+  free (buf);
+  if (tmpdl) { free (tmpdl); }
 
   l = strlen (prefix) + 32;
   buf = (char *) malloc (sizeof (char)*l);
