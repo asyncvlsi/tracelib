@@ -28,12 +28,14 @@ TARGETLIBS=$(LIB) $(SHLIB1) $(SHLIB2) $(SHLIB3)
 TARGETINCS=tracelib.h
 TARGETINCSUBDIR=act
 
-OBJS=tracelib.o
+OBJS1=tracelib.o
 SHOBJS1=vcd.os
 SHOBJS2=lxt2.os ext/lxt2_write.os
 SHOBJS3=atr.os
 
-SRCS=$(SHOBJS1:.os=.cc) $(OBJS:.o=.c) lxt2.c atr.c
+OBJS=$(OBJS1) $(SHOBJS1) $(SHOBJS2) $(SHOBJS3)
+
+SRCS=$(SHOBJS1:.os=.cc) $(OBJS1:.o=.c) lxt2.c atr.c
 
 SUBDIRS=ext
 
