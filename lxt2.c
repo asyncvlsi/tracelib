@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "ext/lxt2_write.h"
-#include "trace.h"
+#include "tracelib.h"
 
 
 struct local_lxt2_state {

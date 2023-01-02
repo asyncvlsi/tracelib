@@ -24,7 +24,7 @@
 #include <time.h>
 #include <math.h>
 #include <ctype.h>
-#include "trace.h"
+#include "tracelib.h"
 
 #ifdef ACT_MODE
 #include <common/int.h>

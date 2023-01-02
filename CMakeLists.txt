@@ -18,41 +18,43 @@
 #  Boston, MA  02110-1301, USA.
 #
 #-------------------------------------------------------------------------
+cmake_minimum_required(VERSION 3.10)
 
-LIB=libtracelib_$(EXT).a
-SHLIB1=libtrace_vcd_$(EXT).so
-SHLIB2=libtrace_lxt2_$(EXT).so
-SHLIB3=libtrace_atr_$(EXT).so
+project(tracelib)
 
-TARGETLIBS=$(LIB) $(SHLIB1) $(SHLIB2) $(SHLIB3)
-TARGETINCS=tracelib.h
-TARGETINCSUBDIR=act
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ext)
 
-OBJS=tracelib.o
-SHOBJS1=vcd.os
-SHOBJS2=lxt2.os ext/lxt2_write.os
-SHOBJS3=atr.os
+add_library(tracelib STATIC tracelib.c)
 
-SRCS=$(SHOBJS1:.os=.cc) $(OBJS:.o=.c) lxt2.c atr.c
+add_library(trace_vcd SHARED vcd.cc)
 
-SUBDIRS=ext
+add_library(trace_lxt2 SHARED lxt2.c ext/lxt2_write.c)
+target_link_libraries(trace_lxt2 libz.a)
 
-include $(ACT_HOME)/scripts/Makefile.std
+message(STATUS "Prefix is " ${CMAKE_INSTALL_PREFIX})
 
-CFLAGS+=-DACT_MODE -DTRACELIB_ENV=\"ACT_HOME\"
+if(DEFINED ENV{ACT_HOME})
+  add_compile_options(-DTRACELIB_ENV=\"ACT_HOME\")
+  include_directories($ENV{ACT_HOME}/include)
+  link_directories($ENV{ACT_HOME}/lib)
+  add_library(trace_atr SHARED atr.c)
+  target_link_libraries(trace_atr libvlsilib_sh.so)
+  install(
+   TARGETS
+   trace_atr
+   DESTINATION lib
+  )
+endif()
 
-$(LIB): $(OBJS)
-	ar ruv $(LIB) $(OBJS)
-	$(RANLIB) $(LIB)
-
-$(SHLIB1): $(SHOBJS1)
-	$(ACT_HOME)/scripts/linkso $(SHLIB1) $(SHOBJS1) $(SHLIBCOMMON)
-
-$(SHLIB2): $(SHOBJS2)
-	$(ACT_HOME)/scripts/linkso $(SHLIB2) $(SHOBJS2) -lz
-
-$(SHLIB3): $(SHOBJS3)
-	$(ACT_HOME)/scripts/linkso $(SHLIB3) $(SHOBJS3) $(SHLIBCOMMON)
-
--include Makefile.deps
-
+install(
+   TARGETS
+   tracelib
+   trace_vcd
+   trace_lxt2
+   DESTINATION lib
+)
+install(
+   FILES "tracelib.h"
+   DESTINATION include
+)

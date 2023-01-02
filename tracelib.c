@@ -23,7 +23,7 @@
 #include <dlfcn.h>
 #include <string.h>
 #include <stdlib.h>
-#include "trace.h"
+#include "tracelib.h"
 
 #define NEW(a,b)							\
   do {									\
