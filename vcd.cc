@@ -24,6 +24,7 @@
 #include <time.h>
 #include <math.h>
 #include <ctype.h>
+#include <string.h>
 #include "tracelib.h"
 
 #ifdef ACT_MODE
@@ -135,7 +136,7 @@ void mygenmergesort (char *a, int elem_sz, int sz,
   free (b);
 }
  
-static const char **_strings;
+static char **_strings;
 
 static int _vcd_group_signals (char *a, char *b)
 {
@@ -213,8 +214,10 @@ class VCDInfo {
       free (_idxmap);
     }
     if (_nm_max > 0) {
-      free (_nm)
-;
+      for (int i=0; i < _nm_len; i++) {
+	free (_nm[i]);
+      }
+      free (_nm);
     }
     if (_type) {
       free (_type);
@@ -335,6 +338,9 @@ class VCDInfo {
     fprintf (_fp, "$dumpvars\n");
     _in_dump = 1;
     _nm_max = 0;
+    for (int i=0; i < _nm_len; i++) {
+      free (_nm[i]);
+    }
     free (_nm);
     _nm = NULL;
   }
@@ -423,7 +429,7 @@ class VCDInfo {
   }
   
  private:
-  const char **_nm;
+  char **_nm;
   int *_type;			// -1 = analog, otherwise digitai w
   int _nm_len;
   int _nm_max;
@@ -443,7 +449,7 @@ class VCDInfo {
     if (_nm_len == _nm_max) {
       if (_nm_max == 0) {
 	_nm_max = 8;
-	_nm = (const char **) malloc (sizeof (const char *) * _nm_max);
+	_nm = (char **) malloc (sizeof (const char *) * _nm_max);
 	if (!_nm) {
 	  fprintf (stderr, "Failed to allocate %d pointers\n", _nm_max);
 	  exit (1);
@@ -456,7 +462,7 @@ class VCDInfo {
       }
       else {
 	_nm_max = 2*_nm_max;
-	_nm = (const char **) realloc (_nm, sizeof (const char *) * _nm_max);
+	_nm = (char **) realloc (_nm, sizeof (const char *) * _nm_max);
 	if (!_nm) {
 	  fprintf (stderr, "Failed to allocate %d pointers\n", _nm_max);
 	  exit (1);
@@ -468,7 +474,8 @@ class VCDInfo {
 	}
       }
     }
-    _nm[_nm_len] = nm;
+    _nm[_nm_len] = (char *) malloc (strlen (nm) + 1);
+    strcpy (_nm[_nm_len], nm);
     _type[_nm_len] = t;
     _nm_len++;
   }

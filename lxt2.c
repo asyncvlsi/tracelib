@@ -222,6 +222,8 @@ int lxt2_change_wide_digital (void *handle, void *node, float t, int len, unsign
 
 int lxt2_close (void *handle)
 {
-  lxt2_wr_close ((struct lxt2_wr_trace *) handle);
+  struct local_lxt2_state *st = (struct local_lxt2_state *)handle;
+  lxt2_wr_close (st->f);
+  free (st);
   return 1;
 }
