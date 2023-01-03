@@ -158,6 +158,9 @@ int atr_change_wide_chan (void *handle, void *node, float t,
   }
   else {
     int carry = ATRACE_CHAN_VAL_OFFSET;
+    if (len > ATRACE_WIDE_NUM(nm)) {
+      len = ATRACE_WIDE_NUM(nm);
+    }
     for (int i=0; i < len; i++) {
       unsigned long oval = v[i];
       av.valp[i] = v[i] + carry;

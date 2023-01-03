@@ -213,6 +213,8 @@ extern "C" {
   
   int act_trace_close (act_trace_t *);
 
+  int act_trace_has_alt (act_extern_trace_func_t *);
+
 #ifdef __cplusplus
 }
 #endif

@@ -278,6 +278,17 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
 }
 
 
+int act_trace_has_alt (act_extern_trace_func_t *tlib)
+{
+  if (!tlib) {
+    return 0;
+  }
+  if (tlib->create_tracefile_alt) {
+    return 1;
+  }
+  return 0;
+}
+
 act_trace_t *act_trace_create (act_extern_trace_func_t *tlib,
 			       const char *name,
 			       float stop_time,

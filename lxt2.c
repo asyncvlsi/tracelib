@@ -200,7 +200,12 @@ static char *_getlongbits (int width, int len, unsigned long *v)
     val >>= 1;
     pos++;
     if (pos % 64 == 0) {
-      val = v[pos/64];
+      if (pos/64 >= len) {
+	val = 0;
+      }
+      else {
+	val = v[pos/64];
+      }
     }
   }
   _local_bits[width] = '\0';

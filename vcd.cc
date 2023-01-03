@@ -440,13 +440,17 @@ class VCDInfo {
   void emitDigital (int idx, int len, unsigned long *v) {
     int width = 32;
     int off = 0;
+    int i;
     if (_type[idx] > 0) {
       width = _type[idx];
     }
     fprintf (_fp, "b");
     len--;
     off = (width-1) % 64;
-    for (int i=0; i < width; i++) {
+    for (i=0; i < width; i++) {
+      if (len < 0) {
+	break;
+      }
       fprintf (_fp, "%c", ((v[len] >> off) & 1) ? '1' : '0');
       off--;
       if (off < 0) {
