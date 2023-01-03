@@ -44,12 +44,17 @@ To begin using the interface, a shared object library must be loaded.
   * `int act_trace_digital_change (act_trace_t *, void *node, float t, unsigned long v)`
   * `int act_trace_wide_digital_change (act_trace_t *, void *node, float t, int len, unsigned long *v)`
     * This call is used to support wider than 64-bit values recorded in the trace. `len` (more than one) is the size of the `v` array, where the least significant 64-bit chunk is in `v[0]`.
+  * `int act_trace_chan_change (act_trace_t *, void *node, float t, act_chan_state_t s, unsigned long v)`
+  * `int act_trace_wide_chan_change (act_trace_t *, void *node, float t, act_chan_state_t s, unsigned long v)`
+    * These calls are similar to the digital change calls, except they also include a channel state parameter `s`. The state can be `ACT_CHAN_IDLE`, `ACT_CHAN_SEND_BLOCKED`, `ACT_CHAN_RECV_BLOCKED`, or `ACT_CHAN_VALUE`. The `v` field is only used when a `ACT_CHAN_VALUE` is specified.
   * All functions return 1 on success, 0 on failure. The `node` pointer is the handle returned when the signal was added.
 
 * Signal changes for mode one are recoded with a similar API, except that the time is specified as an array of unsigned long values (similar to the wide integer/channel).
   * `int act_trace_analog_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, float v)`
   * `int act_trace_digital_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, unsigned long v)`
   * `int act_trace_wide_digital_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, int lenv, unsigned long *v)`
+  * `int act_trace_chan_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, act_chan_state_t s, unsigned long v)`
+  * `int act_trace_wide_chan_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, act_chan_state_t s, int lenv, unsigned long *v)`
   * All functions return 1 on success, 0 on failure.
 
 * `int act_trace_close (act_trace_t *)`
