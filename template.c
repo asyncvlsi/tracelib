@@ -75,6 +75,18 @@ int prefix_change_wide_digital (void *handle, void *node, float t, int len, unsi
   return 0;
 }
 
+int prefix_change_chan (void *handle, void *node, float t,
+			act_chan_state_t s, unsigned long v)
+{
+  return 0;
+}
+
+int prefix_change_wide_chan (void *handle, void *node, float t,
+			     act_chan_state_t s, int len, unsigned long *v)
+{
+  return 0;
+}
+
 int prefix_change_digital_alt (void *handle, void *node, int len, unsigned long *t, unsigned long v)
 {
   return 0;
@@ -89,6 +101,20 @@ int prefix_change_wide_digital_alt (void *handle, void *node, int len, unsigned 
 {
   return 0;
 }
+
+int prefix_change_chan_alt (void *handle, void *node, int len, unsigned long *t,
+			    act_chan_state_t s, unsigned long v)
+{
+  return 0;
+}
+
+int prefix_change_wide_chan_alt (void *handle, void *node,
+				    int len, unsigned long *t,
+				    act_chan_state_t s, int lenv, unsigned long *v)
+{
+  return 0;
+}
+
 
 int prefix_close (void *handle)
 {

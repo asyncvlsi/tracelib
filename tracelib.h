@@ -37,7 +37,7 @@ extern "C" {
        ACT_CHAN_RECV_BLOCKED = 0,
        ACT_CHAN_SEND_BLOCKED = 1,
        ACT_CHAN_IDLE = 2,
-       ACT_CHAN_VAL_OFFSET = 3
+       ACT_CHAN_VALUE = 3
   } act_chan_state_t;
 
   typedef enum act_signal_type {
@@ -47,9 +47,7 @@ extern "C" {
     ACT_SIG_ANALOG = 3  /* real number: voltages and currents */
   } act_signal_type_t;
 
-#define ACT_TRACE_CHAN_WIDTH(w) ((w) < 2 ? ((w)+2) : ((w)+1))
 #define ACT_TRACE_WIDE_NUM(w) (((w)+8*sizeof (unsigned long)-1)/(8*sizeof(unsigned long)))
-#define ACT_TRACE_CHAN_NUM(w) ACT_TRACE_WIDE_NUM(ACT_TRACE_CHAN_WIDTH (w))
 
   typedef struct {
     /* return a handle to the trace file for subsequent calls */
@@ -84,15 +82,23 @@ extern "C" {
     
 
     struct {
-	/* use this for BOOL, INT, and CHAN */
+      /* use this for BOOL, INT */
       int (*signal_change_digital) (void *handle, void *node, float t,
 				      unsigned long v);
 
-      /* for > 64-bit values for INT/CHAN */
+      /* for > 64-bit values for INT */
       int (*signal_change_wide_digital) (void *handle, void *node, float t,
 					   int len,
 					   unsigned long *v);
 
+      /* use this for CHAN */
+      int (*signal_change_chan) (void *handle, void *node, float t,
+				 act_chan_state_t s, unsigned long v);
+
+      /* for > 64-bit CHAN */
+      int (*signal_change_wide_chan) (void *handle, void *node, float t,
+				      act_chan_state_t s,  int len,
+				      unsigned long *v);
       /* for analog signals */
       int (*signal_change_analog) (void *handle, void *node, float t, float v);
     } std;
@@ -105,6 +111,15 @@ extern "C" {
 					      unsigned long *tm,
 					      int len2,
 					      unsigned long *v);
+
+      int (*signal_change_chan) (void *handle, void *node, int len,
+				 unsigned long *tm,
+				 act_chan_state_t s, unsigned long v);
+
+      int (*signal_change_wide_chan) (void *handle, void *node, int len,
+				      unsigned long *tm,
+				      act_chan_state_t s, int len2,
+				      unsigned long *v);
 
       int (*signal_change_analog) (void *handle, void *node, int len,
 				   unsigned long *tm, float v);
@@ -149,10 +164,14 @@ extern "C" {
      change_digital - ... 
      change_analog  - ...
      change_wide_digital - ...
+     change_chan - ...
+     change_wide_chan - ...
 
      change_digital_alt - ... 
      change_analog_alt  - ...
      change_wide_digital_alt - ...
+     change_chan_alt - ...
+     change_wide_chan_alt - ...
      
      close - close_tracefile
 
@@ -181,10 +200,16 @@ extern "C" {
   int act_trace_digital_change (act_trace_t *, void *node, float t, unsigned long v);
   int act_trace_wide_digital_change (act_trace_t *, void *node, float t,
 				     int len, unsigned long *v);
+  int act_trace_chan_change (act_trace_t *, void *node, float t,
+			     act_chan_state_t s, unsigned long v);
+  int act_trace_wide_chan_change (act_trace_t *, void *node, float t,
+				  act_chan_state_t s, int len, unsigned long *v);
 
   int act_trace_analog_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, float v);
   int act_trace_digital_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, unsigned long v);
   int act_trace_wide_digital_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, int lenv, unsigned long *v);
+  int act_trace_chan_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, act_chan_state_t s, unsigned long v);
+  int act_trace_wide_chan_change_alt (act_trace_t *, void *node, int len, unsigned long *tm, act_chan_state_t s, int lenv, unsigned long *v);
   
   int act_trace_close (act_trace_t *);
 

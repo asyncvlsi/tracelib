@@ -390,7 +390,40 @@ class VCDInfo {
       _last_itime = t;
     }
   }
-#endif  
+#endif
+
+  void emitChanState (int idx, act_chan_state_t s) {
+    int width = 32;
+    if (_type[idx] > 0) {
+      width = _type[idx];
+    }
+    fprintf (_fp, "b");
+    if (s == ACT_CHAN_IDLE) {
+      if (width >= 3) {
+	fprintf (_fp, "z00");
+      }
+      else {
+	fprintf (_fp, "z");
+      }
+    }
+    else if (s == ACT_CHAN_RECV_BLOCKED) {
+      if (width >= 3) {
+	fprintf (_fp, "z01");
+      }
+      else {
+	fprintf (_fp, "z");
+      }
+    }
+    else if (s == ACT_CHAN_SEND_BLOCKED) {
+      if (width >= 3) {
+	fprintf (_fp, "z10");
+      }
+      else {
+	fprintf (_fp, "z");
+      }
+    }
+    fprintf (_fp, " %s\n", _idx_to_char (idx));
+  }
 
   void emitDigital (int idx, unsigned long v) {
     int width = 32;
@@ -569,7 +602,7 @@ void *vcd_add_int_signal (void *handle, const char *s, int width)
 void *vcd_add_chan_signal (void *handle, const char *s, int width)
 {
   VCDInfo *vi = (VCDInfo *)handle;
-  int idx = vi->addDigital (s, ACT_TRACE_CHAN_WIDTH (width));
+  int idx = vi->addDigital (s, width);
   return (void *)((long)idx+1);
 }
 
@@ -633,6 +666,43 @@ int vcd_change_wide_digital (void *handle, void *node, float t,
 }
 
 
+int vcd_change_chan (void *handle, void *node, float t,
+		     act_chan_state_t s, unsigned long v)
+{
+  VCDInfo *vi = (VCDInfo *)handle;
+
+  if (!vi->isInDump()) {
+    vi->emitTime (t);
+  }
+  if (s != ACT_CHAN_VALUE) {
+    vi->emitChanState (((unsigned long)node)-1, s);
+  }
+  else {
+    vi->emitDigital (((unsigned long)node)-1, v);
+  }
+  return 1;
+}
+
+
+int vcd_change_wide_chan (void *handle, void *node, float t,
+			     act_chan_state_t s,
+			     int len, unsigned long *v)
+{
+  VCDInfo *vi = (VCDInfo *)handle;
+
+  if (!vi->isInDump()) {
+    vi->emitTime (t);
+  }
+  if (s != ACT_CHAN_VALUE) {
+    vi->emitChanState (((unsigned long)node)-1, s);
+  }
+  else {
+    vi->emitDigital (((unsigned long)node)-1, len, v);
+  }
+  return 0;
+}
+
+
 #ifdef ACT_MODE
 int vcd_change_digital_alt (void *handle, void *node, int len,
 			    unsigned long *tm, unsigned long v)
@@ -687,6 +757,57 @@ int vcd_change_wide_digital_alt (void *handle, void *node, int len,
   
   return 0;
 }
+
+
+int vcd_change_chan_alt (void *handle, void *node, int len,
+			 unsigned long *tm,
+			 act_chan_state_t s, unsigned long v)
+{
+  VCDInfo *vi = (VCDInfo *)handle;
+  if (!vi->isInDump()) {
+    BigInt tmp;
+    tmp.setWidth (len * 8 * sizeof (unsigned long));
+    for (int i=0; i < len; i++) {
+      tmp.setVal (i, tm[i]);
+    }
+    vi->emitTime (tmp);
+  }
+  if (s != ACT_CHAN_VALUE) {
+    vi->emitChanState (((unsigned long)node)-1, s);
+  }
+  else {
+    vi->emitDigital (((unsigned long)node)-1, v);
+  }
+  
+  return 1;
+}
+
+int vcd_change_wide_chan_alt (void *handle, void *node, int len,
+				 unsigned long *tm,
+				 act_chan_state_t s,
+				 int lenv, unsigned long *v)
+{
+  VCDInfo *vi = (VCDInfo *)handle;
+
+  if (!vi->isInDump()) {
+    BigInt tmp;
+    tmp.setWidth (len * 8 * sizeof (unsigned long));
+    for (int i=0; i < len; i++) {
+      tmp.setVal (i, tm[i]);
+    }
+    vi->emitTime (tmp);
+  }
+  if (s != ACT_CHAN_VALUE) {
+    vi->emitChanState (((unsigned long)node)-1, s);
+  }
+  else {
+    vi->emitDigital (((unsigned long)node)-1, lenv, v);
+  }
+  
+  return 0;
+}
+
+
 #endif
 
 int vcd_close (void *handle)

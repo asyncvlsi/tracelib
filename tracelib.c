@@ -70,11 +70,15 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
        { "change_digital", (void **)&t.std.signal_change_digital, 0 },
        { "change_analog", (void **)&t.std.signal_change_analog, 0 },
        { "change_wide_digital", (void **) &t.std.signal_change_wide_digital, 0 },
+       { "change_chan", (void **)&t.std.signal_change_chan, 0 },
+       { "change_wide_chan", (void **) &t.std.signal_change_wide_chan, 0 },
 
        /* integer time change */
        { "change_digital_alt", (void **)&t.alt.signal_change_digital, 0 },
        { "change_analog_alt", (void **)&t.alt.signal_change_analog, 0 },
        { "change_wide_digital_alt", (void **) &t.alt.signal_change_wide_digital, 0 },
+       { "change_chan_alt", (void **)&t.alt.signal_change_chan, 0 },
+       { "change_wide_chan_alt", (void **) &t.alt.signal_change_wide_chan, 0 },
 
        /* close file */
        { "close", (void **) &t.close_tracefile, 1 },
@@ -196,7 +200,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
       }
       return NULL;
     }
-    if (t.add_digital_signal || t.add_int_signal || t.add_chan_signal) {
+    if (t.add_digital_signal || t.add_int_signal) {
       if (!t.std.signal_change_digital) {
 	fprintf (stderr, "ERROR: missing digital signal change in library %s\n",
 		 dl ? dl : tmpdl);
@@ -205,13 +209,23 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
 	}
 	return NULL;
       }
-      if (!t.std.signal_change_wide_digital) {
-	fprintf (stderr, "ERROR: missing wide digital signal change in library %s\n",
+      if (t.add_int_signal && !t.std.signal_change_wide_digital) {
+	fprintf (stderr, "WARNING: missing wide digital signal change in library %s\n",
 	       dl ? dl : tmpdl);
+      }
+    }
+    if (t.add_chan_signal) {
+      if (!t.std.signal_change_chan) {
+	fprintf (stderr, "ERROR: missing chan signal change in library %s\n",
+		 dl ? dl : tmpdl);
 	if (tmpdl) {
 	  free (tmpdl);
 	}
 	return NULL;
+      }
+      if (!t.std.signal_change_wide_chan) {
+	fprintf (stderr, "WARNING: missing wide chan signal change in library %s\n",
+		 dl ? dl : tmpdl);
       }
     }
   }
@@ -224,7 +238,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
       }
       return NULL;
     }
-    if (t.add_digital_signal || t.add_int_signal || t.add_chan_signal) {
+    if (t.add_digital_signal || t.add_int_signal) {
       if (!t.alt.signal_change_digital) {
 	fprintf (stderr, "ERROR: missing alt digital signal change in library %s\n",
 		 dl ? dl : tmpdl);
@@ -233,13 +247,23 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
 	}
 	return NULL;
       }
-      if (!t.alt.signal_change_wide_digital) {
-	fprintf (stderr, "ERROR: missing alt wide digital signal change in library %s\n",
+      if (t.add_int_signal && !t.alt.signal_change_wide_digital) {
+	fprintf (stderr, "WARNING: missing alt wide digital signal change in library %s\n",
 	       dl ? dl : tmpdl);
+      }
+    }
+    if (t.add_chan_signal) {
+      if (!t.alt.signal_change_chan) {
+	fprintf (stderr, "ERROR: missing alt chan signal change in library %s\n",
+		 dl ? dl : tmpdl);
 	if (tmpdl) {
 	  free (tmpdl);
 	}
 	return NULL;
+      }
+      if (!t.alt.signal_change_wide_chan) {
+	fprintf (stderr, "WARNING: missing alt wide chan signal change in library %s\n",
+		 dl ? dl : tmpdl);
       }
     }
   }
@@ -480,6 +504,61 @@ int act_trace_wide_digital_change (act_trace_t *t, void *node, float tm,
 }
 
 
+int act_trace_chan_change (act_trace_t *t, void *node, float tm,
+			   act_chan_state_t s,
+			   unsigned long v)
+{
+  if (t->mode != 0) {
+    return 0;
+  }
+  
+  if (t->state == 2) {
+    t->state = 3;
+  }
+  else if (t->state == 4) {
+    t->state = 5;
+  }
+  if (t->state != 3 && t->state != 5) {
+    fprintf (stderr, "ERROR: signal change in illegal state (%d)\n",
+	     t->state);
+    return 0;
+  }
+  
+  if (t->t->std.signal_change_chan) {
+    return (*t->t->std.signal_change_chan) (t->handle, node, tm, s, v);
+  }
+  
+  return 0;
+}
+				    
+int act_trace_wide_chan_change (act_trace_t *t, void *node, float tm,
+				act_chan_state_t s, int len,
+				unsigned long *v)
+{
+  if (t->mode != 0) {
+    return 0;
+  }
+  
+  if (t->state == 2) {
+    t->state = 3;
+  }
+  else if (t->state == 4) {
+    t->state = 5;
+  }
+  if (t->state != 3 && t->state != 5) {
+    fprintf (stderr, "ERROR: signal change in illegal state (%d)\n",
+	     t->state);
+    return 0;
+  }
+  
+  if (t->t->std.signal_change_wide_chan) {
+    return (*t->t->std.signal_change_wide_chan) (t->handle, node, tm, s, len,v);
+  }
+  
+  return 0;
+}
+
+
 int act_trace_analog_change_alt (act_trace_t *t, void *node,
 				int len, unsigned long *tm, float v)
 {
@@ -555,6 +634,62 @@ int act_trace_wide_digital_change_alt (act_trace_t *t, void *node,
   if (t->t->alt.signal_change_wide_digital) {
     return (*t->t->alt.signal_change_wide_digital) (t->handle, node, len, tm,
 						    lenv, v);
+  }
+  
+  return 0;
+}
+
+int act_trace_chan_change_alt (act_trace_t *t, void *node,
+			       int len, unsigned long *tm,
+			       act_chan_state_t s, unsigned long v)
+{
+  if (t->mode == 0) {
+    return 0;
+  }
+  
+  if (t->state == 2) {
+    t->state = 3;
+  }
+  else if (t->state == 4) {
+    t->state = 5;
+  }
+  if (t->state != 3 && t->state != 5) {
+    fprintf (stderr, "ERROR: signal change in illegal state (%d)\n",
+	     t->state);
+    return 0;
+  }
+  
+  if (t->t->alt.signal_change_chan) {
+    return (*t->t->alt.signal_change_chan) (t->handle, node, len, tm, s, v);
+  }
+  
+  return 0;
+}
+				    
+int act_trace_wide_chan_change_alt (act_trace_t *t, void *node,
+				    int len, unsigned long *tm,
+				    act_chan_state_t s, 
+				    int lenv, unsigned long *v)
+{
+  if (t->mode == 0) {
+    return 0;
+  }
+  
+  if (t->state == 2) {
+    t->state = 3;
+  }
+  else if (t->state == 4) {
+    t->state = 5;
+  }
+  if (t->state != 3 && t->state != 5) {
+    fprintf (stderr, "ERROR: signal change in illegal state (%d)\n",
+	     t->state);
+    return 0;
+  }
+  
+  if (t->t->alt.signal_change_wide_chan) {
+    return (*t->t->alt.signal_change_wide_chan) (t->handle, node, len, tm,
+						 s, lenv, v);
   }
   
   return 0;

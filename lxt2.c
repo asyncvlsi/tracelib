@@ -116,6 +116,98 @@ int lxt2_init_end (void *handle)
   return 1;
 }
 
+
+
+static char *_local_bits = NULL;
+static int _iwidth = 0;
+static char *_getbits (int width, unsigned long v)
+{
+  if (width < 0) {
+    width = 0;
+  }
+  
+  if (_iwidth <= width+1) {
+    if (_iwidth == 0) {
+      _iwidth = width + 1;
+      if (_iwidth < 65) {
+	_iwidth = 65;
+      }
+      _local_bits = (char *) malloc (_iwidth);
+    }
+    else {
+      _iwidth = width + 32;
+      _local_bits = (char *) realloc (_local_bits, _iwidth);
+    }
+    if (!_local_bits) {
+      fprintf (stderr, "FATAL: could not allocate %d bytes\n", _iwidth);
+      exit (1);
+    }
+  }
+
+  if (width == 1) {
+    if (v == ACT_SIG_BOOL_FALSE) {
+      _local_bits[0] = '0';
+    }
+    else if (v == ACT_SIG_BOOL_TRUE) {
+      _local_bits[0] = '1';
+    }
+    else if (v == ACT_SIG_BOOL_X) {
+      _local_bits[0] = 'x';
+    }
+    else if (v == ACT_SIG_BOOL_Z) {
+      _local_bits[0] = 'z';
+    }
+    _local_bits[1] = '\0';
+  }
+  else {
+    int i;
+    for (i = width-1; i >= 0; i--) {
+      _local_bits[i] = '0' + (v & 1);
+      v >>= 1;
+    }
+    _local_bits[width] = '\0';
+  }
+  return _local_bits;
+}
+
+static char *_getlongbits (int width, int len, unsigned long *v)
+{
+  int i;
+  unsigned long val;
+  int pos;
+  
+  if (_iwidth <= width+1) {
+    if (_iwidth == 0) {
+      _iwidth = width + 1;
+      if (_iwidth < 65) {
+	_iwidth = 65;
+      }
+      _local_bits = (char *) malloc (_iwidth);
+    }
+    else {
+      _iwidth = width + 32;
+      _local_bits = (char *) realloc (_local_bits, _iwidth);
+    }
+    if (!_local_bits) {
+      fprintf (stderr, "FATAL: could not allocate %d bytes\n", _iwidth);
+      exit (1);
+    }
+  }
+  val = v[0];
+  pos = 0;
+  for (i = width-1; i >= 0; i--) {
+    _local_bits[i] = '0' + (val & 1);
+    val >>= 1;
+    pos++;
+    if (pos % 64 == 0) {
+      val = v[pos/64];
+    }
+  }
+  _local_bits[width] = '\0';
+  return _local_bits;
+}
+
+
 int lxt2_change_digital (void *handle, void *node, float t, unsigned long v)
 {
   struct local_lxt2_state *st = (struct local_lxt2_state *)handle;
@@ -125,44 +217,7 @@ int lxt2_change_digital (void *handle, void *node, float t, unsigned long v)
     lxt2_wr_set_time64 (st->f, (unsigned long) (t/st->_ts));
     st->_last_time = t;
   }
-
-  if (s->msb - s->lsb <= 0) {
-    char bits[2];
-    if (v == ACT_SIG_BOOL_FALSE) {
-      bits[0] = '0';
-    }
-    else if (v == ACT_SIG_BOOL_TRUE) {
-      bits[0] = '1';
-    }
-    else if (v == ACT_SIG_BOOL_X) {
-      bits[0] = 'x';
-    }
-    else if (v == ACT_SIG_BOOL_Z) {
-      bits[0] = 'z';
-    }
-    bits[1] = '\0';
-
-    lxt2_wr_emit_value_bit_string (st->f, s, 0, bits);
-  }
-  else {
-    int i;
-    char *bits;
-    bits = (char *) malloc (sizeof (char*) * (s->msb - s->lsb + 2));
-    if (!bits) {
-      fprintf (stderr, "Failed to allocate %d bytes\n",
-	       s->msb - s->lsb + 2);
-      exit (1);
-    }
-    for (i = s->msb - s->lsb; i >= 0; i--) {
-      bits[i] = '0' + (v & 1);
-      v >>= 1;
-    }
-    bits[s->msb - s->lsb + 1] = '\0';
-    
-    lxt2_wr_emit_value_bit_string (st->f, s, 0, bits);
-    
-    free (bits);
-  }
+  lxt2_wr_emit_value_bit_string (st->f, s, 0, _getbits (s->msb - s->lsb + 1,v));
   return 1;
 }
 
@@ -194,29 +249,82 @@ int lxt2_change_wide_digital (void *handle, void *node, float t, int len, unsign
     st->_last_time = t;
   }
   
-  bits = (char *) malloc (sizeof (char*) * (s->msb - s->lsb + 2));
-  if (!bits) {
-    fprintf (stderr, "Failed to allocate %d bytes\n",
-	     s->msb - s->lsb + 2);
-    exit (1);
-  }
-
-  val = v[0];
-  pos = 0;
-  for (i = s->msb - s->lsb; i >= 0; i--) {
-    bits[i] = '0' + (val & 1);
-    val >>= 1;
-    pos++;
-    if (pos % 64 == 0) {
-      val = v[pos/64];
-    }
-  }
-  bits[s->msb - s->lsb + 1] = '\0';
-
-  lxt2_wr_emit_value_bit_string (st->f, s, 0, bits);
+  lxt2_wr_emit_value_bit_string (st->f, s, 0, _getlongbits (s->msb - s->lsb + 1,
+							    len, v));
     
-  free (bits);
 
+  return 1;
+}
+
+int lxt2_change_chan (void *handle, void *node, float t,
+		      act_chan_state_t state, unsigned long v)
+{
+  struct local_lxt2_state *st = (struct local_lxt2_state *)handle;
+  struct lxt2_wr_symbol *s = (struct lxt2_wr_symbol *)node;
+
+  if (st->_last_time != t) {
+    lxt2_wr_set_time64 (st->f, (unsigned long) (t/st->_ts));
+    st->_last_time = t;
+  }
+  if (state == ACT_CHAN_VALUE) {
+    lxt2_wr_emit_value_bit_string (st->f, s, 0, _getbits (s->msb - s->lsb + 1,v));
+  }
+  else {
+    char buf[4];
+    if (s->msb - s->lsb + 1 >= 3) {
+      if (state == ACT_CHAN_IDLE) {
+	snprintf (buf, 4, "z00");
+      }
+      else if (state == ACT_CHAN_RECV_BLOCKED) {
+	snprintf (buf, 4, "z01");
+      }
+      else {
+	/* send blocked */
+	snprintf (buf, 4, "z10");
+      }
+    }
+    else {
+      snprintf (buf, 4, "z");
+    }
+    lxt2_wr_emit_value_bit_string (st->f, s, 0, buf);
+  }
+  return 1;
+}
+
+int lxt2_change_wide_chan (void *handle, void *node, float t,
+			   act_chan_state_t state,
+			   int len, unsigned long *v)
+{
+  struct local_lxt2_state *st = (struct local_lxt2_state *)handle;
+  struct lxt2_wr_symbol *s = (struct lxt2_wr_symbol *)node;
+  int i;
+  char *bits;
+  int pos;
+  unsigned long val;
+
+  if (st->_last_time != t) {
+    lxt2_wr_set_time64 (st->f, (unsigned long) (t/st->_ts));
+    st->_last_time = t;
+  }
+
+  if (state == ACT_CHAN_VALUE) {
+    lxt2_wr_emit_value_bit_string (st->f, s, 0, _getlongbits (s->msb - s->lsb + 1,
+							      len, v));
+  }
+  else {
+    char buf[4];
+    if (state == ACT_CHAN_IDLE) {
+      snprintf (buf, 4, "z00");
+    }
+    else if (state == ACT_CHAN_RECV_BLOCKED) {
+      snprintf (buf, 4, "z01");
+    }
+    else {
+      /* send blocked */
+      snprintf (buf, 4, "z10");
+    }
+    lxt2_wr_emit_value_bit_string (st->f, s, 0, buf);
+  }
   return 1;
 }
 
