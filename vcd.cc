@@ -328,8 +328,8 @@ class VCDInfo {
 	fprintf (_fp, "$var %s %d %s %s $end\n",
 		 _type[ix] < 0 ? "real" : "wire",
 		 _type[ix] < 0 ? 1 : _type[ix],
-		 _nm[ix],
-		 _idx_to_char (ix));
+		 _idx_to_char (ix),
+		 _nm[ix]);
       }
     }
     
