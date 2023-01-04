@@ -399,12 +399,7 @@ class VCDInfo {
     }
     fprintf (_fp, "b");
     if (s == ACT_CHAN_IDLE) {
-      if (width >= 3) {
-	fprintf (_fp, "z00");
-      }
-      else {
-	fprintf (_fp, "z");
-      }
+      fprintf (_fp, "z");
     }
     else if (s == ACT_CHAN_RECV_BLOCKED) {
       if (width >= 3) {
