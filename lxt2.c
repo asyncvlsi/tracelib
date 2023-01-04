@@ -285,7 +285,7 @@ int lxt2_change_chan (void *handle, void *node, float t,
     char buf[4];
     if (ABS(s->msb - s->lsb + 1) >= 3) {
       if (state == ACT_CHAN_IDLE) {
-	snprintf (buf, 4, "z00");
+	snprintf (buf, 4, "z");
       }
       else if (state == ACT_CHAN_RECV_BLOCKED) {
 	snprintf (buf, 4, "z01");
@@ -326,7 +326,7 @@ int lxt2_change_wide_chan (void *handle, void *node, float t,
   else {
     char buf[4];
     if (state == ACT_CHAN_IDLE) {
-      snprintf (buf, 4, "z00");
+      snprintf (buf, 4, "z");
     }
     else if (state == ACT_CHAN_RECV_BLOCKED) {
       snprintf (buf, 4, "z01");
