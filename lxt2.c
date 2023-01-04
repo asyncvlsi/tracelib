@@ -123,7 +123,7 @@ static int _iwidth = 0;
 static char *_getbits (int width, unsigned long v)
 {
   if (width < 0) {
-    width = 0;
+    width = -width;
   }
   
   if (_iwidth <= width+1) {
@@ -175,6 +175,10 @@ static char *_getlongbits (int width, int len, unsigned long *v)
   int i;
   unsigned long val;
   int pos;
+
+  if (width < 0) {
+    width = -width;
+  }
   
   if (_iwidth <= width+1) {
     if (_iwidth == 0) {
@@ -222,7 +226,9 @@ int lxt2_change_digital (void *handle, void *node, float t, unsigned long v)
     lxt2_wr_set_time64 (st->f, (unsigned long) (t/st->_ts));
     st->_last_time = t;
   }
+
   lxt2_wr_emit_value_bit_string (st->f, s, 0, _getbits (s->msb - s->lsb + 1,v));
+
   return 1;
 }
 
