@@ -96,8 +96,7 @@ void *lxt2_add_int_signal (void *handle, const char *s, int width)
 
 void *lxt2_add_chan_signal (void *handle, const char *s, int width)
 {
-  struct local_lxt2_state *st = (struct local_lxt2_state *)handle;
-  return lxt2_add_int_signal (st->f, s, width);
+  return lxt2_add_int_signal (handle, s, width);
 }
 
 int lxt2_signal_end (void *handle)
@@ -267,6 +266,8 @@ int lxt2_change_wide_digital (void *handle, void *node, float t, int len, unsign
   return 1;
 }
 
+#define ABS(x) ((x) < 0 ? -(x) : (x))
+
 int lxt2_change_chan (void *handle, void *node, float t,
 		      act_chan_state_t state, unsigned long v)
 {
@@ -282,7 +283,7 @@ int lxt2_change_chan (void *handle, void *node, float t,
   }
   else {
     char buf[4];
-    if (s->msb - s->lsb + 1 >= 3) {
+    if (ABS(s->msb - s->lsb + 1) >= 3) {
       if (state == ACT_CHAN_IDLE) {
 	snprintf (buf, 4, "z00");
       }
