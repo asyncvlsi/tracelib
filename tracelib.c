@@ -347,7 +347,7 @@ void *act_trace_add_signal (act_trace_t *t, act_signal_type_t type,
   switch (type) {
   case ACT_SIG_BOOL:
     if (t->t->add_digital_signal) {
-      return (*t->t->add_analog_signal) (t->handle, s);
+      return (*t->t->add_digital_signal) (t->handle, s);
     }
     break;
 
