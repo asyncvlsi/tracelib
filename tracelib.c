@@ -336,6 +336,7 @@ void *act_trace_add_signal (act_trace_t *t, act_signal_type_t type,
 
   if (t->state == 0) {
     t->state = 1;
+    (*t->t->add_signal_start) (t->handle);
   }
   
   if (t->state != 1) {
@@ -384,10 +385,12 @@ int act_trace_init_start (act_trace_t *t)
   if (t->state == 0) {
     fprintf (stderr, "WARNING: no signals added?\n");
     t->state = 1;
+    (*t->t->add_signal_start) (t->handle);
   }
   
   if (t->state == 1) {
     t->state = 2;
+    (*t->t->add_signal_end) (t->handle);
   }
   else {
     fprintf (stderr, "ERROR: initial block in illegal state (%d)\n", t->state);
