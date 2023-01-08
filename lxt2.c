@@ -21,12 +21,12 @@ void *lxt2_create (const  char *nm, float stop_time, float ts)
 {
   struct local_lxt2_state *st;
   struct lxt2_wr_trace *f;
-  int i10;
+  int il10;
   double l10;
   
   f = lxt2_wr_init (nm);
   l10 = log10 (ts);
-  int il10 = (int)l10;
+  il10 = (int)l10;
   if (il10 != l10) {
     il10--;
   }
@@ -249,10 +249,6 @@ int lxt2_change_wide_digital (void *handle, void *node, float t, int len, unsign
 {
   struct local_lxt2_state *st = (struct local_lxt2_state *)handle;
   struct lxt2_wr_symbol *s = (struct lxt2_wr_symbol *)node;
-  int i;
-  char *bits;
-  int pos;
-  unsigned long val;
 
   if (st->_last_time != t) {
     lxt2_wr_set_time64 (st->f, (unsigned long) (t/st->_ts));
@@ -309,10 +305,6 @@ int lxt2_change_wide_chan (void *handle, void *node, float t,
 {
   struct local_lxt2_state *st = (struct local_lxt2_state *)handle;
   struct lxt2_wr_symbol *s = (struct lxt2_wr_symbol *)node;
-  int i;
-  char *bits;
-  int pos;
-  unsigned long val;
 
   if (st->_last_time != t) {
     lxt2_wr_set_time64 (st->f, (unsigned long) (t/st->_ts));
