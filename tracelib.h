@@ -128,6 +128,10 @@ extern "C" {
     /* close output file */
     int (*close_tracefile) (void *handle);
 
+
+    /* use this to close the library */
+    void *dlib;
+
   } act_extern_trace_func_t;
 
   typedef struct {
@@ -179,6 +183,10 @@ extern "C" {
      the funcftions from the library. Those signals will be skipped.
   */
   act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *dl);
+
+  void act_trace_close_format (act_extern_trace_func_t *fmt);
+
+  
 
   /* return a handle to the trace file for subsequent calls 
      

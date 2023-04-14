@@ -172,6 +172,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
     if (tmpdl) {
       free (tmpdl);
     }
+    dlclose (dlib);
     return NULL;
   }
   if (!t.create_tracefile && !t.create_tracefile_alt) {
@@ -180,6 +181,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
     if (tmpdl) {
       free (tmpdl);
     }
+    dlclose (dlib);
     return NULL;
   }
   if (!t.add_analog_signal && !t.add_digital_signal && !t.add_int_signal &&
@@ -189,6 +191,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
     if (tmpdl) {
       free (tmpdl);
     }
+    dlclose (dlib);
     return NULL;
   }
   if (t.create_tracefile) {
@@ -198,6 +201,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
       if (tmpdl) {
 	free (tmpdl);
       }
+      dlclose (dlib);
       return NULL;
     }
     if (t.add_digital_signal || t.add_int_signal) {
@@ -207,6 +211,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
 	if (tmpdl) {
 	  free (tmpdl);
 	}
+	dlclose (dlib);
 	return NULL;
       }
       if (t.add_int_signal && !t.std.signal_change_wide_digital) {
@@ -221,6 +226,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
 	if (tmpdl) {
 	  free (tmpdl);
 	}
+	dlclose (dlib);
 	return NULL;
       }
       if (!t.std.signal_change_wide_chan) {
@@ -236,6 +242,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
       if (tmpdl) {
 	free (tmpdl);
       }
+      dlclose (dlib);
       return NULL;
     }
     if (t.add_digital_signal || t.add_int_signal) {
@@ -245,6 +252,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
 	if (tmpdl) {
 	  free (tmpdl);
 	}
+	dlclose (dlib);
 	return NULL;
       }
       if (t.add_int_signal && !t.alt.signal_change_wide_digital) {
@@ -259,6 +267,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
 	if (tmpdl) {
 	  free (tmpdl);
 	}
+	dlclose (dlib);
 	return NULL;
       }
       if (!t.alt.signal_change_wide_chan) {
@@ -270,6 +279,7 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
   
   NEW (fn, act_extern_trace_func_t);
   *fn = t;
+  fn->dlib = dlib;
 
   if (tmpdl) {
     free (tmpdl);
@@ -277,6 +287,12 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
   return fn;
 }
 
+void act_trace_close_format (act_extern_trace_func_t *fmt)
+{
+  if (!fmt) return;
+  dlclose (fmt->dlib);
+  free (fmt);
+}
 
 int act_trace_has_alt (act_extern_trace_func_t *tlib)
 {
