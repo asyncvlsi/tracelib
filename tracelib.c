@@ -55,16 +55,16 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
        { "create_alt", (void **)&t.create_tracefile_alt, 0 },
 
        /* record signals */
-       { "signal_start", (void **)&t.add_signal_start, 1 },
+       { "signal_start", (void **)&t.add_signal_start, 0 },
        { "add_analog_signal", (void **)&t.add_analog_signal, 0 },
        { "add_digital_signal", (void **)&t.add_digital_signal, 0 },
        { "add_int_signal", (void **)&t.add_int_signal, 0 },
        { "add_chan_signal", (void **)&t.add_chan_signal, 0 },
-       { "signal_end", (void **)&t.add_signal_end, 1 },
+       { "signal_end", (void **)&t.add_signal_end, 0 },
 
        /* initial block */
-       { "init_start", (void **)&t.init_start, 1 },
-       { "init_end", (void **)&t.init_end, 1 },
+       { "init_start", (void **)&t.init_start, 0 },
+       { "init_end", (void **)&t.init_end, 0 },
 
        /* floating-point time change */
        { "change_digital", (void **)&t.std.signal_change_digital, 0 },
@@ -82,6 +82,21 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
 
        /* close file */
        { "close", (void **) &t.close_tracefile, 1 },
+
+
+       /* open file */
+       { "open", (void **)&t.open_tracefile, 0 },
+       { "open_alt", (void **)&t.open_tracefile_alt, 0 },
+
+       { "header", (void **)&t.read_header, 0 },
+       { "signal_lookup", (void **)&t.signal_lookup, 0 },
+       { "signal_type", (void **)&t.signal_type, 0 },
+
+       { "advance_time", (void **)&t.advance_time, 0 },
+       { "advance_time_by", (void **)&t.advance_time_by, 0 },
+       { "get_signal", (void **)&t.get_signal, 0 },
+       { "has_more_data", (void **)&t.has_more_data, 0 },
+       
        { NULL, NULL, 0 }
       };
 
@@ -175,28 +190,44 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
     dlclose (dlib);
     return NULL;
   }
+
+  t.has_reader = 0;
+
+
+#define CHECK_FOR(func)							\
+    do {								\
+      if (!t.func) {							\
+	fprintf (stderr, "ERROR: missing " #func " functionality in library %s\n", dl ? dl : tmpdl); \
+	if (tmpdl) {							\
+	  free (tmpdl);							\
+	}								\
+	dlclose (dlib);							\
+	return NULL;							\
+      }									\
+    } while (0)
+  
+
+  if (!t.open_tracefile_alt && !t.open_tracefile) {
+    t.has_reader = 0;
+  }
+  else {
+    t.has_reader = 1;
+    /* check for rest of reader functions */
+
+    CHECK_FOR (read_header);
+    CHECK_FOR (signal_lookup);
+    CHECK_FOR (signal_type);
+    if (!t.advance_time && !t.advance_time_by) {
+      CHECK_FOR (advance_time);
+    }
+    CHECK_FOR (get_signal);
+    CHECK_FOR (has_more_data);
+  }
+
   if (!t.create_tracefile && !t.create_tracefile_alt) {
-    fprintf (stderr, "ERROR: missing create function in library %s\n",
-	     dl ? dl : tmpdl);
-    if (tmpdl) {
-      free (tmpdl);
-    }
-    dlclose (dlib);
-    return NULL;
-  }
-  if (!t.add_analog_signal && !t.add_digital_signal && !t.add_int_signal &&
-      !t.add_chan_signal) {
-    fprintf (stderr, "ERROR: missing all add_signal functions in library %s\n",
-	     dl ? dl : tmpdl);
-    if (tmpdl) {
-      free (tmpdl);
-    }
-    dlclose (dlib);
-    return NULL;
-  }
-  if (t.create_tracefile) {
-    if (t.add_analog_signal && !t.std.signal_change_analog) {
-      fprintf (stderr, "ERROR: missing analog signal change in library %s\n",
+    t.has_writer = 0;
+    if (!t.has_reader) {
+      fprintf (stderr, "ERROR: missing read or write functionality in library %s\n",
 	       dl ? dl : tmpdl);
       if (tmpdl) {
 	free (tmpdl);
@@ -204,40 +235,19 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
       dlclose (dlib);
       return NULL;
     }
-    if (t.add_digital_signal || t.add_int_signal) {
-      if (!t.std.signal_change_digital) {
-	fprintf (stderr, "ERROR: missing digital signal change in library %s\n",
-		 dl ? dl : tmpdl);
-	if (tmpdl) {
-	  free (tmpdl);
-	}
-	dlclose (dlib);
-	return NULL;
-      }
-      if (t.add_int_signal && !t.std.signal_change_wide_digital) {
-	fprintf (stderr, "WARNING: missing wide digital signal change in library %s\n",
-	       dl ? dl : tmpdl);
-      }
-    }
-    if (t.add_chan_signal) {
-      if (!t.std.signal_change_chan) {
-	fprintf (stderr, "ERROR: missing chan signal change in library %s\n",
-		 dl ? dl : tmpdl);
-	if (tmpdl) {
-	  free (tmpdl);
-	}
-	dlclose (dlib);
-	return NULL;
-      }
-      if (!t.std.signal_change_wide_chan) {
-	fprintf (stderr, "WARNING: missing wide chan signal change in library %s\n",
-		 dl ? dl : tmpdl);
-      }
-    }
   }
-  if (t.create_tracefile_alt) {
-    if (t.add_analog_signal && !t.alt.signal_change_analog) {
-      fprintf (stderr, "ERROR: missing alt analog signal change in library %s\n",
+  else {
+    t.has_writer = 1;
+  }
+  if (t.has_writer) {
+    CHECK_FOR (add_signal_start);
+    CHECK_FOR (add_signal_end);
+    CHECK_FOR (init_start);
+    CHECK_FOR (init_end);
+    
+    if (!t.add_analog_signal && !t.add_digital_signal && !t.add_int_signal &&
+	!t.add_chan_signal) {
+      fprintf (stderr, "ERROR: missing all add_signal functions in library %s\n",
 	       dl ? dl : tmpdl);
       if (tmpdl) {
 	free (tmpdl);
@@ -245,9 +255,9 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
       dlclose (dlib);
       return NULL;
     }
-    if (t.add_digital_signal || t.add_int_signal) {
-      if (!t.alt.signal_change_digital) {
-	fprintf (stderr, "ERROR: missing alt digital signal change in library %s\n",
+    if (t.create_tracefile) {
+      if (t.add_analog_signal && !t.std.signal_change_analog) {
+	fprintf (stderr, "ERROR: missing analog signal change in library %s\n",
 		 dl ? dl : tmpdl);
 	if (tmpdl) {
 	  free (tmpdl);
@@ -255,14 +265,40 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
 	dlclose (dlib);
 	return NULL;
       }
-      if (t.add_int_signal && !t.alt.signal_change_wide_digital) {
-	fprintf (stderr, "WARNING: missing alt wide digital signal change in library %s\n",
-	       dl ? dl : tmpdl);
+      if (t.add_digital_signal || t.add_int_signal) {
+	if (!t.std.signal_change_digital) {
+	  fprintf (stderr, "ERROR: missing digital signal change in library %s\n",
+		   dl ? dl : tmpdl);
+	  if (tmpdl) {
+	    free (tmpdl);
+	  }
+	  dlclose (dlib);
+	  return NULL;
+	}
+	if (t.add_int_signal && !t.std.signal_change_wide_digital) {
+	  fprintf (stderr, "WARNING: missing wide digital signal change in library %s\n",
+		   dl ? dl : tmpdl);
+	}
+      }
+      if (t.add_chan_signal) {
+	if (!t.std.signal_change_chan) {
+	  fprintf (stderr, "ERROR: missing chan signal change in library %s\n",
+		   dl ? dl : tmpdl);
+	  if (tmpdl) {
+	    free (tmpdl);
+	  }
+	  dlclose (dlib);
+	  return NULL;
+	}
+	if (!t.std.signal_change_wide_chan) {
+	  fprintf (stderr, "WARNING: missing wide chan signal change in library %s\n",
+		   dl ? dl : tmpdl);
+	}
       }
     }
-    if (t.add_chan_signal) {
-      if (!t.alt.signal_change_chan) {
-	fprintf (stderr, "ERROR: missing alt chan signal change in library %s\n",
+    if (t.create_tracefile_alt) {
+      if (t.add_analog_signal && !t.alt.signal_change_analog) {
+	fprintf (stderr, "ERROR: missing alt analog signal change in library %s\n",
 		 dl ? dl : tmpdl);
 	if (tmpdl) {
 	  free (tmpdl);
@@ -270,9 +306,35 @@ act_extern_trace_func_t *act_trace_load_format (const char *prefix, const char *
 	dlclose (dlib);
 	return NULL;
       }
-      if (!t.alt.signal_change_wide_chan) {
-	fprintf (stderr, "WARNING: missing alt wide chan signal change in library %s\n",
-		 dl ? dl : tmpdl);
+      if (t.add_digital_signal || t.add_int_signal) {
+	if (!t.alt.signal_change_digital) {
+	  fprintf (stderr, "ERROR: missing alt digital signal change in library %s\n",
+		   dl ? dl : tmpdl);
+	  if (tmpdl) {
+	    free (tmpdl);
+	  }
+	  dlclose (dlib);
+	  return NULL;
+	}
+	if (t.add_int_signal && !t.alt.signal_change_wide_digital) {
+	  fprintf (stderr, "WARNING: missing alt wide digital signal change in library %s\n",
+		   dl ? dl : tmpdl);
+	}
+      }
+      if (t.add_chan_signal) {
+	if (!t.alt.signal_change_chan) {
+	  fprintf (stderr, "ERROR: missing alt chan signal change in library %s\n",
+		   dl ? dl : tmpdl);
+	  if (tmpdl) {
+	    free (tmpdl);
+	  }
+	  dlclose (dlib);
+	  return NULL;
+	}
+	if (!t.alt.signal_change_wide_chan) {
+	  fprintf (stderr, "WARNING: missing alt wide chan signal change in library %s\n",
+		   dl ? dl : tmpdl);
+	}
       }
     }
   }
@@ -317,28 +379,35 @@ act_trace_t *act_trace_create (act_extern_trace_func_t *tlib,
     return NULL;
   }
 
+  if (!tlib->has_writer) {
+    fprintf (stderr, "act_trace_create: library is missing writer API!\n");
+    return NULL;
+  }
+
   NEW (t, act_trace_t);
 
   t->state = 0;
   t->t = tlib;
   t->handle = NULL;
+  t->readonly = 0;
 
   if (mode == 0) {
     if (tlib->create_tracefile) {
       t->handle = (*tlib->create_tracefile) (name, stop_time, dt);
     }
+    t->mode = 0;
   }
   else {
     if (tlib->create_tracefile_alt) {
       t->handle = (*tlib->create_tracefile_alt) (name, stop_time, dt);
     }
+    t->mode = 1;
   }
   
   if (!t->handle) {
     free (t);
     return NULL;
   }
-  t->mode = mode;
   t->state = 0;
   return t;
 }
@@ -347,6 +416,10 @@ void *act_trace_add_signal (act_trace_t *t, act_signal_type_t type,
 			    const char *s, int width)
 {
   if (!t) {
+    return NULL;
+  }
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_add_signal() called while reading\n");
     return NULL;
   }
 
@@ -397,6 +470,10 @@ void *act_trace_add_signal (act_trace_t *t, act_signal_type_t type,
 int act_trace_init_start (act_trace_t *t)
 {
   if (!t) return 0;
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_init_start() called while reading\n");
+    return 0;
+  }
   
   if (t->state == 0) {
     fprintf (stderr, "WARNING: no signals added?\n");
@@ -419,6 +496,10 @@ int act_trace_init_start (act_trace_t *t)
 int act_trace_init_end (act_trace_t *t)
 {
   if (!t) return 0;
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_init_end() called while reading\n");
+    return 0;
+  }
   
   if (t->state == 2) {
     fprintf (stderr, "WARNING: no initial signals?\n");
@@ -461,7 +542,11 @@ int act_trace_analog_change (act_trace_t *t, void *node, float tm, float v)
   if (t->mode != 0) {
     return 0;
   }
-  
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_analog_change() called while reading\n");
+    return 0;
+  }
+
   if (t->state == 2) {
     t->state = 3;
   }
@@ -486,7 +571,11 @@ int act_trace_digital_change (act_trace_t *t, void *node, float tm,
   if (t->mode != 0) {
     return 0;
   }
-  
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_digital_change() called while reading\n");
+    return 0;
+  }
+
   if (t->state == 2) {
     t->state = 3;
   }
@@ -513,7 +602,11 @@ int act_trace_wide_digital_change (act_trace_t *t, void *node, float tm,
   if (t->mode != 0) {
     return 0;
   }
-  
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_wide_digital_change() called while reading\n");
+    return 0;
+  }
+
   if (t->state == 2) {
     t->state = 3;
   }
@@ -539,6 +632,10 @@ int act_trace_chan_change (act_trace_t *t, void *node, float tm,
 			   unsigned long v)
 {
   if (t->mode != 0) {
+    return 0;
+  }
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_chan_change() called while reading\n");
     return 0;
   }
   
@@ -568,7 +665,11 @@ int act_trace_wide_chan_change (act_trace_t *t, void *node, float tm,
   if (t->mode != 0) {
     return 0;
   }
-  
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_wide_chan_change() called while reading\n");
+    return 0;
+  }
+
   if (t->state == 2) {
     t->state = 3;
   }
@@ -593,6 +694,10 @@ int act_trace_analog_change_alt (act_trace_t *t, void *node,
 				int len, unsigned long *tm, float v)
 {
   if (t->mode == 0) {
+    return 0;
+  }
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_analog_change_alt() called while reading\n");
     return 0;
   }
 
@@ -621,6 +726,10 @@ int act_trace_digital_change_alt (act_trace_t *t, void *node,
   if (t->mode == 0) {
     return 0;
   }
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_digital_change_alt() called while reading\n");
+    return 0;
+  }
   
   if (t->state == 2) {
     t->state = 3;
@@ -646,6 +755,10 @@ int act_trace_wide_digital_change_alt (act_trace_t *t, void *node,
 				       int lenv, unsigned long *v)
 {
   if (t->mode == 0) {
+    return 0;
+  }
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_wide_digital_change_alt() called while reading\n");
     return 0;
   }
   
@@ -676,6 +789,10 @@ int act_trace_chan_change_alt (act_trace_t *t, void *node,
   if (t->mode == 0) {
     return 0;
   }
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_chan_change_alt() called while reading\n");
+    return 0;
+  }
   
   if (t->state == 2) {
     t->state = 3;
@@ -704,6 +821,10 @@ int act_trace_wide_chan_change_alt (act_trace_t *t, void *node,
   if (t->mode == 0) {
     return 0;
   }
+  if (t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_wide_chan_change_alt() called while reading\n");
+    return 0;
+  }
   
   if (t->state == 2) {
     t->state = 3;
@@ -723,4 +844,150 @@ int act_trace_wide_chan_change_alt (act_trace_t *t, void *node,
   }
   
   return 0;
+}
+
+
+act_trace_t *act_trace_open (act_extern_trace_func_t *tlib,
+			     const char *name,
+			     int mode)
+{
+  act_trace_t *t;
+
+  if (!tlib) {
+    return NULL;
+  }
+
+  if (!tlib->has_reader) {
+    fprintf (stderr, "act_trace_create: library is missing reader API!\n");
+    return NULL;
+  }
+
+  NEW (t, act_trace_t);
+
+  t->state = 0;
+  t->t = tlib;
+  t->handle = NULL;
+  t->readonly = 1;
+
+  if (mode == 0) {
+    if (tlib->open_tracefile) {
+      t->handle = (*tlib->open_tracefile) (name);
+    }
+    t->mode = 0;
+  }
+  else {
+    if (tlib->open_tracefile_alt) {
+      t->handle = (*tlib->open_tracefile_alt) (name);
+    }
+    t->mode = 1;
+  }
+  
+  if (!t->handle) {
+    free (t);
+    return NULL;
+  }
+  t->state = 5;
+  return t;
+}
+
+void act_trace_header (act_trace_t *t, float *stop_time, float *dt)
+{
+  *stop_time = -1;
+  *dt = -1;
+  if (!t) {
+    return;
+  }
+  if (!t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_header() called while writing\n");
+    return;
+  }
+  (*t->t->read_header) (t->handle, stop_time, dt);
+  return;
+}
+
+void *act_trace_lookup (act_trace_t *t, const char *name)
+{
+  if (!t) {
+    return NULL;
+  }
+  if (!t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_lookup() called while writing\n");
+    return NULL;
+  }
+  return (*t->t->signal_lookup) (t->handle, name);
+}
+
+act_signal_type_t act_trace_sigtype (act_trace_t *t, void *sig)
+{
+  if (!t) {
+    return ACT_SIG_BOOL;
+  }
+  if (!t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_sigtype() called while writing\n");
+    return ACT_SIG_BOOL;
+  }
+  return (*t->t->signal_type) (t->handle, sig);
+}
+
+void act_trace_advance_steps (act_trace_t *t, int steps)
+{
+  if (!t) {
+    return;
+  }
+  if (!t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_advance_steps() called while writing\n");
+    return;
+  }
+  (*t->t->advance_time) (t->handle, steps);
+}
+
+void act_trace_advance_time (act_trace_t *t, float dt)
+{
+  if (!t) {
+    return;
+  }
+  if (!t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_advance_time() called while writing\n");
+    return;
+  }
+  (*t->t->advance_time_by) (t->handle, dt);
+}
+
+int act_trace_has_more_data (act_trace_t *t)
+{
+  if (!t) {
+    return 0;
+  }
+  if (!t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_has_more_data() called while writing\n");
+    return 0;
+  }
+  return (*t->t->has_more_data) (t->handle);
+}
+
+act_signal_val_t act_trace_get_signal (act_trace_t *t, void *sig)
+{
+  act_signal_val_t v;
+  v.v = 0;
+  if (!t) {
+    return v;
+  }
+  if (!t->readonly) {
+    fprintf (stderr, "WARNING: act_trace_has_more_data() called while writing\n");
+    return v;
+  }
+  return (t->t->get_signal) (t->handle, sig);
+}
+
+unsigned long act_trace_get_smallval (act_trace_t *t, void *sig)
+{
+  act_signal_val_t v = act_trace_get_signal (t, sig);
+  return v.val;
+}
+
+
+float act_trace_get_analog (act_trace_t *t, void *sig)
+{
+  act_signal_val_t v = act_trace_get_signal (t, sig);
+  return v.v;
 }

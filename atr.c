@@ -185,3 +185,83 @@ int atr_close (void *handle)
   atrace_close ((atrace *)handle);
   return 1;
 }
+
+
+void *atr_open (const char *name)
+{
+  return atrace_open (name);
+}
+
+void atr_header (void *handle, float *stop_time, float *dt)
+{
+  int nnodes, nsteps, fmt, ts;
+  atrace_header ((atrace *)handle, &ts, &nnodes, &nsteps, &fmt);
+  *stop_time = ((atrace *)handle)->stop_time;
+  *dt = ((atrace *)handle)->vdt;
+}
+
+void *atr_signal_lookup (void *handle, const char *name)
+{
+  return atrace_lookup ((atrace *)handle, name);
+}
+
+act_signal_type_t atr_signal_type (void *handle, void *sig)
+{
+  name_t *n = (name_t *)sig;
+  if (n->type == 0) {
+    return ACT_SIG_ANALOG;
+  }
+  else if (n->type == 1) {
+    if (n->width == 1) {
+      return ACT_SIG_BOOL;
+    }
+    else {
+      return ACT_SIG_INT;
+    }
+  }
+  else if (n->type == 2) {
+    return ACT_SIG_CHAN;
+  }
+  else {
+    /* other, report as integer */
+    return ACT_SIG_INT;
+  }
+}  
+
+void atr_advance_time (void *handle, int steps)
+{
+  atrace *a = (atrace *)handle;
+  atrace_advance_time (a, steps);
+}
+
+
+void atr_advance_time_by (void *handle, float dt)
+{
+  atrace *a = (atrace *)handle;
+  atrace_advance_time (a, (int)((dt+0.9*a->vdt)/(a->vdt)));
+}
+
+int atr_has_more_data (void *handle)
+{
+  return atrace_more_data ((atrace *)handle);
+}
+
+act_signal_val_t atr_get_signal (void *handle, void *sig)
+{
+  name_t *n = (name_t *)sig;
+  act_signal_val_t ret;
+  atrace_val_t v = ATRACE_GET_VAL (n);
+  if (atrace_is_analog (n)) {
+    ret.v = ATRACE_FLOATVAL (&v);
+  }
+  else if (atrace_is_digital (n) || atrace_is_channel (n)) {
+    if (atrace_bitwidth (n) <= ATRACE_SHORT_WIDTH) {
+      ret.val = ATRACE_SMALLVAL (&v);
+    }
+    else {
+      ret.valp = ATRACE_BIGVAL (&v);
+    }
+  }
+  return ret;
+}
+  
