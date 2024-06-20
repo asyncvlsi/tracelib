@@ -4,6 +4,9 @@
  *
  */
 
+
+/** writer API functions **/
+
 void *prefix_create (const  char *nm, float stop_time, float ts)
 {
   return 0;
@@ -115,6 +118,56 @@ int prefix_change_wide_chan_alt (void *handle, void *node,
   return 0;
 }
 
+
+/** reader API functions **/
+
+void *prefix_open (const  char *nm)
+{
+  return NULL;
+}
+
+void *prefix_open_alt (const  char *nm)
+{
+  return NULL;
+}
+
+
+void prefix_header (void *handle, float *stop_time, float *dt)
+{
+  *stop_time = -1;
+  *dt = -1;
+  return;
+}
+
+void *prefix_signal_lookup (void *handle, const char *name)
+{
+  return NULL;
+}
+
+act_signal_type_t prefix_type (void *handle, void *signal)
+{
+  return ACT_SIG_BOOL;
+}
+
+act_signal_val_t prefix_get_signal (void *handle, void *signal)
+{
+  return ACT_SIG_BOOL_X;
+}
+
+void prefix_advance_time (void *handle, int steps)
+{
+  return;
+}
+
+void prefix_advance_time_by (void *handle, float dt)
+{
+  return;
+}
+
+int prefix_has_more_data (void *handle)
+{
+  return 0;
+}
 
 int prefix_close (void *handle)
 {

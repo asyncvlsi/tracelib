@@ -27,6 +27,11 @@ To begin using the interface, a shared object library must be loaded.
   * `dl` is the path to the shared object library. If omitted, the default name is used, which is `libtrace_<prefix>.so`. If the library was built as an ACT support library, the `$ACT_HOME/lib/` directory is checked for the library as well.
   * If successful, a pointer to the trace file API is returned that is used to create a trace file.
 
+A shared object library must provide a complete set of functions 
+for either a reader or a writer (ideally both). The file `template.c` has
+a dummy template with blank functions that are named correctly. A trace
+file format library has to provide implementations of those API functions.
+
 ### Writer API
 
 * `act_trace_t *act_trace_create (act_extern_trace_func_t *, const char *name, float stop_time, float ts, int mode)`
