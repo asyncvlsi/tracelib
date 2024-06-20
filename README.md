@@ -76,7 +76,10 @@ Finally, the API enforces a simple state machine in terms of the order in which 
 
 * `act_trace_t *act_trace_open (act_extern_trace_func_t *, const char *name, int mode)`
   * This opens a trace file with the specified name for reading. It takes the trace file API as an argument.
-  * The mode argument can be zero or one; zero means that the trace file created uses the API where the time is specified as a floating-point number. If mode is one, the time is specified as an unsigned integer, where the time in SI units is obtained by multiplying the integer by `ts`. Note that a trace file API can support both interfaces, but a specific trace file can only use one of the two options.
+  * The mode argument can be zero or one; zero means that the trace file created uses the API where the time is specified as a floating-point number. If mode is one, the time is specified as an unsigned integer, where the time in SI units.
+
+* `void act_trace_header (act_trace_t *, float *stop_time, float *dt)`
+  * Read the trace file header and return the stop time as well as the timestep resolution. If the header doesn't contain a parameter, `-1` is returned.
 
 * `void *act_trace_lookup (act_trace_t *, const char *name)`
    * This returns a signal handle that to be used to access the signal value. It returns `NULL` on failure (e.g. name does not exist in the trace file).
