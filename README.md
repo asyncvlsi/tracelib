@@ -27,6 +27,8 @@ To begin using the interface, a shared object library must be loaded.
   * `dl` is the path to the shared object library. If omitted, the default name is used, which is `libtrace_<prefix>.so`. If the library was built as an ACT support library, the `$ACT_HOME/lib/` directory is checked for the library as well.
   * If successful, a pointer to the trace file API is returned that is used to create a trace file.
 
+### Writer API
+
 * `act_trace_t *act_trace_create (act_extern_trace_func_t *, const char *name, float stop_time, float ts, int mode)`
   * This creates the trace file with the specified name. It takes the trace file API as an argument, as well as the end time for the simulation trace and the time resolution.
   * The mode argument can be zero or one; zero means that the trace file created uses the API where the time is specified as a floating-point number. If mode is one, the time is specified as an unsigned integer, where the time in SI units is obtained by multiplying the integer by `ts`. Note that a trace file API can support both interfaces, but a specific trace file can only use one of the two options.
@@ -61,6 +63,7 @@ To begin using the interface, a shared object library must be loaded.
   * Closes the trace file and releases storage.
 
 Finally, the API enforces a simple state machine in terms of the order in which these functions are to be called. The order must be:
+
 1. Create trace file
 2. Add signals
 3. Start initial block
@@ -68,3 +71,31 @@ Finally, the API enforces a simple state machine in terms of the order in which 
 5. End initial block
 6. Any signal changes for the rest of the simulation
 7. Close trace file
+
+### Reader API
+
+* `act_trace_t *act_trace_open (act_extern_trace_func_t *, const char *name, int mode)`
+  * This opens a trace file with the specified name for reading. It takes the trace file API as an argument.
+  * The mode argument can be zero or one; zero means that the trace file created uses the API where the time is specified as a floating-point number. If mode is one, the time is specified as an unsigned integer, where the time in SI units is obtained by multiplying the integer by `ts`. Note that a trace file API can support both interfaces, but a specific trace file can only use one of the two options.
+
+* `void *act_trace_lookup (act_trace_t *, const char *name)`
+   * This returns a signal handle that to be used to access the signal value. It returns `NULL` on failure (e.g. name does not exist in the trace file).
+   * `name` is the name of the signal name.
+
+* `act_signal_type_t act_trace_sigtype (act_trace_t *, void *sig)` 
+  * This returns the signal type given the signal pointer.
+
+* `act_signal_val_t act_trace_get_signal (act_trace_t *, void *sig)`
+  * This returns the current value of the specified signal
+
+* Time is advanced when reading a trace file with two different APIs. For mode zero, the following API is used
+  * `void act_trace_advance_steps (act_trace_t *, int steps)`
+  
+* Time is advanced when reading a trace file with two different APIs. For mode one, the following API is used
+  * `void act_trace_advance_steps (act_trace_t *, float dt)`
+
+* You can determine if there is more data in the trace file using the following API
+  * `int act_trace_has_more_data (act_trace_t *)`
+
+* `int act_trace_close (act_trace_t *)`
+  * Closes the trace file and releases storage.
