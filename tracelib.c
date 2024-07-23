@@ -991,3 +991,16 @@ float act_trace_get_analog (act_trace_t *t, void *sig)
   act_signal_val_t v = act_trace_get_signal (t, sig);
   return v.v;
 }
+
+
+int act_trace_fmt_has_reader (act_extern_trace_func_t *fn)
+{
+  if (!fn) return 0;
+  return fn->has_reader;
+}
+
+int act_trace_fmt_has_writer (act_extern_trace_func_t *fn)
+{
+  if (!fn) return 0;
+  return fn->has_writer;
+}

@@ -221,6 +221,11 @@ extern "C" {
 
   void act_trace_close_format (act_extern_trace_func_t *fmt);
 
+  /* return 1 if the format files have a reader API, 0 otherwise */
+  int act_trace_fmt_has_reader (act_extern_trace_func_t *);
+
+  /* return 1 if the format files have a writer API, 0 otherwise */
+  int act_trace_fmt_has_writer (act_extern_trace_func_t *);
   
 
   /* return a handle to the trace file for subsequent calls 
