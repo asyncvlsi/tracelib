@@ -32,6 +32,23 @@ for either a reader or a writer (ideally both). The file `template.c` has
 a dummy template with blank functions that are named correctly. A trace
 file format library has to provide implementations of those API functions.
 
+Once a format is loaded, the following functions can be used to query
+the functionality provided.
+
+* `int act_trace_fmt_has_reader (act_extern_trace_func_t *fn)`
+  * `fn` is a loaded trace file format
+  * If the loaded format has a reader API, this returns 1; otherwise it returns 0
+
+* `int act_trace_fmt_has_writer (act_extern_trace_func_t *fn)`
+  * `fn` is a loaded trace file format
+  * If the loaded format has a writer API, this returns 1; otherwise it returns 0
+
+A format API and associated functions/storage can be released using the
+following call:
+
+* `void act_trace_close_format (act_extern_trace_func_t *fn)`
+  * This closes the format `fn` and releases all storage associated with it. WARNING: any reader/writer API calls where the trace file was initialized using the specified format will fail (and likely cause a crash).
+
 ### Writer API
 
 * `act_trace_t *act_trace_create (act_extern_trace_func_t *, const char *name, float stop_time, float ts, int mode)`
