@@ -425,9 +425,21 @@ class VCDInfo {
     if (_type[idx] > 0) {
       width = _type[idx];
     }
+    
     fprintf (_fp, "b");
-    for (int i=0; i < width; i++) {
-      fprintf (_fp, "%c", ((v >> (width-1-i)) & 1) ? '1' : '0');
+
+    if (width == 1 && (v == ACT_SIG_BOOL_X || v == ACT_SIG_BOOL_Z)) {
+      if (v == ACT_SIG_BOOL_X) {
+	fprintf (_fp, "x");
+      }
+      else {
+	fprintf (_fp, "z");
+      }
+    }
+    else {
+      for (int i=0; i < width; i++) {
+	fprintf (_fp, "%c", ((v >> (width-1-i)) & 1) ? '1' : '0');
+      }
     }
     fprintf (_fp, " %s\n", _idx_to_char (idx));
   }
